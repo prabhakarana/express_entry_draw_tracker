@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+import altair as alt
 
 st.set_page_config(page_title="Express Entry Draw Tracker", layout="wide")
 st.title("🍁 Canada Express Entry Draw Tracker (Live + Fallback)")
@@ -67,11 +68,29 @@ else:
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("### 📅 Total Invitations by Year")
-        st.dataframe(df.groupby("Year")["ITAs Issued"].sum().reset_index(), use_container_width=True)
+        yearly = df.groupby("Year")["ITAs Issued"].sum().reset_index()
+        st.dataframe(yearly, use_container_width=True)
+        st.altair_chart(
+            alt.Chart(yearly).mark_bar().encode(
+                x=alt.X("Year:O", title="Year"),
+                y=alt.Y("ITAs Issued:Q", title="Total ITAs"),
+                tooltip=["Year", "ITAs Issued"]
+            ).properties(width=400, height=300),
+            use_container_width=True
+        )
 
     with col2:
         st.markdown("### 📆 Total Invitations by Quarter")
-        st.dataframe(df.groupby("Quarter")["ITAs Issued"].sum().reset_index(), use_container_width=True)
+        quarterly = df.groupby("Quarter")["ITAs Issued"].sum().reset_index()
+        st.dataframe(quarterly, use_container_width=True)
+        st.altair_chart(
+            alt.Chart(quarterly).mark_bar().encode(
+                x=alt.X("Quarter:O", title="Quarter"),
+                y=alt.Y("ITAs Issued:Q", title="Total ITAs"),
+                tooltip=["Quarter", "ITAs Issued"]
+            ).properties(width=400, height=300),
+            use_container_width=True
+        )
 
     st.markdown("### 📜 Draw History")
     st.dataframe(df[["Draw Date", "Category", "ITAs Issued", "CRS Score"]].sort_values(by="Draw Date", ascending=False), use_container_width=True)
