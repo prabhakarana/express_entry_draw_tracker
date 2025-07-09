@@ -15,7 +15,7 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 TEST_EMAIL = os.getenv("TEST_EMAIL", "false").lower() == "true"
 
 # --- Load latest draw data ---
-csv_path = "data/express_entry_2025.csv"  # Adjust path if needed
+csv_path = "fallback_draw_data_2025.csv"  # Adjust path if needed
 df = pd.read_csv(csv_path)
 df['Draw Date'] = pd.to_datetime(df['Draw Date'])
 
