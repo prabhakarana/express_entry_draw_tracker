@@ -2,3 +2,5 @@ streamlit
 beautifulsoup4
 pandas
 requests
+altair
+xlsxwriter
