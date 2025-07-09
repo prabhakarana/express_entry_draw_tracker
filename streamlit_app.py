@@ -4,26 +4,25 @@ from bs4 import BeautifulSoup
 import pandas as pd
 
 st.set_page_config(page_title="Express Entry Draw Tracker", layout="wide")
-
-st.title("🍁 Canada Express Entry Draw Tracker (Live)")
-st.markdown("Real-time ITA history by category, CRS, and draw date. Data fetched from [Canada.ca](https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/express-entry/rounds-invitations.html)")
+st.title("🍁 Canada Express Entry Draw Tracker (Live + Fallback)")
+st.markdown("Real-time ITA history by category, CRS, and draw date. Falls back to 2025 data if Canada.ca is unreachable.")
 
 @st.cache_data(ttl=3600)
 def fetch_draws():
     base_url = "https://www.canada.ca"
     main_url = base_url + "/en/immigration-refugees-citizenship/services/immigrate-canada/express-entry/rounds-invitations.html"
-    response = requests.get(main_url)
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    links = [
-        base_url + a["href"]
-        for a in soup.select("a[href*='rounds-invitations']") if "date" in a["href"]
-    ]
-
-    draws = []
-    for link in links:
-        try:
-            r = requests.get(link)
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        response = requests.get(main_url, headers=headers, timeout=10)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+        links = [
+            base_url + a["href"]
+            for a in soup.select("a[href*='rounds-invitations']") if "date" in a["href"]
+        ]
+        draws = []
+        for link in links:
+            r = requests.get(link, headers=headers, timeout=10)
             s = BeautifulSoup(r.text, "html.parser")
             title = s.find("h1").text.strip()
             paras = s.find_all("p")
@@ -40,13 +39,17 @@ def fetch_draws():
                 "ITAs Issued": invitations,
                 "URL": link
             })
-        except Exception as e:
-            continue
-    return pd.DataFrame(draws)
+        df = pd.DataFrame(draws)
+        return df.dropna(subset=["Draw Date"])
+    except Exception as e:
+        st.warning(f"⚠️ Live data unavailable. Using fallback data. Reason: {e}")
+        return pd.read_csv("fallback_draw_data_2025.csv", parse_dates=["Draw Date"])
 
+# Load data
 df = fetch_draws()
+
 if df.empty:
-    st.warning("No data found.")
+    st.error("No draw data available.")
 else:
     pivot = df.groupby("Category").agg(
         Total_ITAs=pd.NamedAgg(column="ITAs Issued", aggfunc="sum"),
@@ -54,7 +57,7 @@ else:
         Last_Draw=pd.NamedAgg(column="Draw Date", aggfunc="max")
     ).sort_values("Total_ITAs", ascending=False).reset_index()
 
-    st.dataframe(pivot)
+    st.dataframe(pivot, use_container_width=True)
 
     st.subheader("📅 Draw History")
-    st.dataframe(df.sort_values("Draw Date", ascending=False).reset_index(drop=True))
+    st.dataframe(df.sort_values("Draw Date", ascending=False).reset_index(drop=True), use_container_width=True)
