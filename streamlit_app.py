@@ -3,8 +3,16 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import altair as alt
+from io import BytesIO
+import base64
 
-st.set_page_config(page_title="Express Entry Draw Tracker", layout="wide")
+st.set_page_config(page_title="Express Entry Draw Tracker", layout="wide", initial_sidebar_state="expanded")
+
+# Load theme toggle
+dark_mode = st.sidebar.checkbox("🌙 Enable Dark Mode", value=False)
+if dark_mode:
+    st.markdown("<style>body { background-color: #111; color: #eee; }</style>", unsafe_allow_html=True)
+
 st.title("🍁 Canada Express Entry Draw Tracker (Live + Fallback)")
 st.markdown("Real-time ITA history by category, CRS, and draw date. Falls back to 2025 data if Canada.ca is unreachable.")
 
@@ -46,7 +54,6 @@ def fetch_draws():
         st.warning(f"⚠️ Live data unavailable. Using fallback data. Reason: {e}")
         return pd.read_csv("fallback_draw_data_2025.csv", parse_dates=["Draw Date"])
 
-# Load data
 df = fetch_draws()
 
 if df.empty:
@@ -54,85 +61,78 @@ if df.empty:
 else:
     df["Year"] = df["Draw Date"].dt.year
     df["Quarter"] = df["Draw Date"].dt.to_period("Q").astype(str)
-    pivot = df.groupby("Category").agg(
+
+    # Filters
+    with st.sidebar:
+        st.markdown("### 🔍 Filter Options")
+        selected_year = st.multiselect("Filter by Year", options=sorted(df["Year"].unique()), default=sorted(df["Year"].unique()))
+        crs_min, crs_max = int(df["CRS Score"].min()), int(df["CRS Score"].max())
+        selected_crs = st.slider("CRS Score Range", min_value=crs_min, max_value=crs_max, value=(crs_min, crs_max))
+
+    # Apply filters
+    filtered = df[(df["Year"].isin(selected_year)) & (df["CRS Score"].between(*selected_crs))]
+
+    # Category Summary
+    pivot = filtered.groupby("Category").agg(
         Total_ITAs=pd.NamedAgg(column="ITAs Issued", aggfunc="sum"),
         Lowest_CRS=pd.NamedAgg(column="CRS Score", aggfunc="min"),
         Last_Draw=pd.NamedAgg(column="Draw Date", aggfunc="max")
     ).sort_values("Total_ITAs", ascending=False).reset_index()
     pivot["Last_Draw"] = pivot["Last_Draw"].dt.strftime("%B %d, %Y")
-    df["Draw Date"] = df["Draw Date"].dt.strftime("%B %d, %Y")
+    filtered["Draw Date"] = filtered["Draw Date"].dt.strftime("%B %d, %Y")
 
     st.markdown("### 🧾 Draw Summary by Category")
     st.dataframe(pivot, use_container_width=True)
 
+    # Yearly + Quarterly charts
     col1, col2 = st.columns(2)
     with col1:
+        yearly = filtered.groupby("Year")["ITAs Issued"].sum().reset_index()
         st.markdown("### 📅 Total Invitations by Year")
-        yearly = df.groupby("Year")["ITAs Issued"].sum().reset_index()
         st.dataframe(yearly, use_container_width=True)
 
-        chart = alt.Chart(yearly).mark_bar(
-            color="#1E88E5", cornerRadiusTopLeft=3, cornerRadiusTopRight=3
-        ).encode(
-            x=alt.X("Year:O", title="Year", axis=alt.Axis(labelFontSize=12, titleFontSize=14)),
-            y=alt.Y("ITAs Issued:Q", title="Total Invitations", axis=alt.Axis(titleFontSize=14)),
-            tooltip=["Year", "ITAs Issued"]
-        ).properties(
-            title="Total Invitations by Year",
-            width=500,
-            height=350
-        ).configure_title(
-            fontSize=16,
-            anchor='start',
-            color='gray'
-        ).configure_axis(
-            labelFontSize=12,
-            titleFontSize=14
+        bar = alt.Chart(yearly).mark_bar(color="#1E88E5").encode(
+            x="Year:O", y="ITAs Issued:Q", tooltip=["Year", "ITAs Issued"]
         )
-
-        text = alt.Chart(yearly).mark_text(
-            align='center', baseline='bottom', dy=-5, fontSize=12
-        ).encode(
-            x="Year:O",
-            y="ITAs Issued:Q",
-            text="ITAs Issued:Q"
+        label = alt.Chart(yearly).mark_text(dy=-5, fontSize=12).encode(
+            x="Year:O", y="ITAs Issued:Q", text="ITAs Issued:Q"
         )
-
-        st.altair_chart(chart + text, use_container_width=True)
+        st.altair_chart(alt.layer(bar, label), use_container_width=True)
 
     with col2:
+        quarterly = filtered.groupby("Quarter")["ITAs Issued"].sum().reset_index()
         st.markdown("### 📆 Total Invitations by Quarter")
-        quarterly = df.groupby("Quarter")["ITAs Issued"].sum().reset_index()
         st.dataframe(quarterly, use_container_width=True)
 
-        chart_q = alt.Chart(quarterly).mark_bar(
-            color="#43A047", cornerRadiusTopLeft=3, cornerRadiusTopRight=3
-        ).encode(
-            x=alt.X("Quarter:O", title="Quarter", axis=alt.Axis(labelFontSize=12, titleFontSize=14)),
-            y=alt.Y("ITAs Issued:Q", title="Total Invitations", axis=alt.Axis(titleFontSize=14)),
-            tooltip=["Quarter", "ITAs Issued"]
-        ).properties(
-            title="Total Invitations by Quarter",
-            width=500,
-            height=350
-        ).configure_title(
-            fontSize=16,
-            anchor='start',
-            color='gray'
-        ).configure_axis(
-            labelFontSize=12,
-            titleFontSize=14
+        bar_q = alt.Chart(quarterly).mark_bar(color="#43A047").encode(
+            x="Quarter:O", y="ITAs Issued:Q", tooltip=["Quarter", "ITAs Issued"]
         )
-
-        text_q = alt.Chart(quarterly).mark_text(
-            align='center', baseline='bottom', dy=-5, fontSize=12
-        ).encode(
-            x="Quarter:O",
-            y="ITAs Issued:Q",
-            text="ITAs Issued:Q"
+        label_q = alt.Chart(quarterly).mark_text(dy=-5, fontSize=12).encode(
+            x="Quarter:O", y="ITAs Issued:Q", text="ITAs Issued:Q"
         )
+        st.altair_chart(alt.layer(bar_q, label_q), use_container_width=True)
 
-        st.altair_chart(chart_q + text_q, use_container_width=True)
+    # Export buttons
+    st.markdown("### ⬇️ Export Draw History")
+    export_df = filtered[["Draw Date", "Category", "ITAs Issued", "CRS Score"]].sort_values(by="Draw Date", ascending=False)
 
-    st.markdown("### 📜 Draw History")
-    st.dataframe(df[["Draw Date", "Category", "ITAs Issued", "CRS Score"]].sort_values(by="Draw Date", ascending=False), use_container_width=True)
+    def convert_df(df):
+        return df.to_csv(index=False).encode("utf-8")
+
+    csv = convert_df(export_df)
+    st.download_button("📥 Download CSV", data=csv, file_name="draw_history.csv", mime="text/csv")
+
+    try:
+        import xlsxwriter
+        buffer = BytesIO()
+        with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
+            export_df.to_excel(writer, index=False, sheet_name="DrawHistory")
+            writer.save()
+        st.download_button("📥 Download Excel", data=buffer.getvalue(), file_name="draw_history.xlsx", mime="application/vnd.ms-excel")
+    except ImportError:
+        st.warning("Install xlsxwriter to enable Excel export.")
+
+    st.markdown("### 📜 Filtered Draw History")
+    st.dataframe(export_df, use_container_width=True)
+
+    st.info("📧 Email alert and auto-summary features require external backend setup (e.g., via Zapier, Airflow, or AWS Lambda).")
