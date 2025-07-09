@@ -36,7 +36,7 @@ if latest_draw_date > last_draw_date or os.getenv("TEST_EMAIL", "false").lower()
         f"<ul>\n"
         f"<li><b>🧾 Category:</b> {latest_draw['Category']}</li>\n"
         f"<li><b>📅 Date:</b> {latest_draw['Draw Date'].date()}</li>\n"
-        f"<li><b>🎯 CRS:</b> {{latest_draw['CRS Score']}</li>\n"
+        f"<li><b>🎯 CRS:</b> {latest_draw['CRS Score']}</li>\n"
         f"<li><b>🎟️ ITAs Issued:</b> {latest_draw['ITAs Issued']}</li>\n"
         f"</ul>\n"
     )
