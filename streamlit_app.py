@@ -70,27 +70,69 @@ else:
         st.markdown("### 📅 Total Invitations by Year")
         yearly = df.groupby("Year")["ITAs Issued"].sum().reset_index()
         st.dataframe(yearly, use_container_width=True)
-        st.altair_chart(
-            alt.Chart(yearly).mark_bar().encode(
-                x=alt.X("Year:O", title="Year"),
-                y=alt.Y("ITAs Issued:Q", title="Total ITAs"),
-                tooltip=["Year", "ITAs Issued"]
-            ).properties(width=400, height=300),
-            use_container_width=True
+
+        chart = alt.Chart(yearly).mark_bar(
+            color="#1E88E5", cornerRadiusTopLeft=3, cornerRadiusTopRight=3
+        ).encode(
+            x=alt.X("Year:O", title="Year", axis=alt.Axis(labelFontSize=12, titleFontSize=14)),
+            y=alt.Y("ITAs Issued:Q", title="Total Invitations", axis=alt.Axis(titleFontSize=14)),
+            tooltip=["Year", "ITAs Issued"]
+        ).properties(
+            title="Total Invitations by Year",
+            width=500,
+            height=350
+        ).configure_title(
+            fontSize=16,
+            anchor='start',
+            color='gray'
+        ).configure_axis(
+            labelFontSize=12,
+            titleFontSize=14
         )
+
+        text = alt.Chart(yearly).mark_text(
+            align='center', baseline='bottom', dy=-5, fontSize=12
+        ).encode(
+            x="Year:O",
+            y="ITAs Issued:Q",
+            text="ITAs Issued:Q"
+        )
+
+        st.altair_chart(chart + text, use_container_width=True)
 
     with col2:
         st.markdown("### 📆 Total Invitations by Quarter")
         quarterly = df.groupby("Quarter")["ITAs Issued"].sum().reset_index()
         st.dataframe(quarterly, use_container_width=True)
-        st.altair_chart(
-            alt.Chart(quarterly).mark_bar().encode(
-                x=alt.X("Quarter:O", title="Quarter"),
-                y=alt.Y("ITAs Issued:Q", title="Total ITAs"),
-                tooltip=["Quarter", "ITAs Issued"]
-            ).properties(width=400, height=300),
-            use_container_width=True
+
+        chart_q = alt.Chart(quarterly).mark_bar(
+            color="#43A047", cornerRadiusTopLeft=3, cornerRadiusTopRight=3
+        ).encode(
+            x=alt.X("Quarter:O", title="Quarter", axis=alt.Axis(labelFontSize=12, titleFontSize=14)),
+            y=alt.Y("ITAs Issued:Q", title="Total Invitations", axis=alt.Axis(titleFontSize=14)),
+            tooltip=["Quarter", "ITAs Issued"]
+        ).properties(
+            title="Total Invitations by Quarter",
+            width=500,
+            height=350
+        ).configure_title(
+            fontSize=16,
+            anchor='start',
+            color='gray'
+        ).configure_axis(
+            labelFontSize=12,
+            titleFontSize=14
         )
+
+        text_q = alt.Chart(quarterly).mark_text(
+            align='center', baseline='bottom', dy=-5, fontSize=12
+        ).encode(
+            x="Quarter:O",
+            y="ITAs Issued:Q",
+            text="ITAs Issued:Q"
+        )
+
+        st.altair_chart(chart_q + text_q, use_container_width=True)
 
     st.markdown("### 📜 Draw History")
     st.dataframe(df[["Draw Date", "Category", "ITAs Issued", "CRS Score"]].sort_values(by="Draw Date", ascending=False), use_container_width=True)
