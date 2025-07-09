@@ -1,65 +1,65 @@
+
 import os
 import smtplib
-import ssl
-from email.mime.text import MIMEText
 import pandas as pd
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from datetime import datetime
+import json
 
-# --- Configuration from GitHub Secrets ---
-EMAIL_FROM = os.getenv("EMAIL_FROM")
-EMAIL_TO = os.getenv("EMAIL_TO")
-SMTP_HOST = os.getenv("SMTP_HOST")
-SMTP_PORT = os.getenv("SMTP_PORT", "465")
-SMTP_USER = os.getenv("SMTP_USER")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-TEST_EMAIL = os.getenv("TEST_EMAIL", "false").lower() == "true"
-
-# --- Load latest draw data ---
-csv_path = "fallback_draw_data_2025.csv"  # Adjust path if needed
+# Load fallback data
+csv_path = "fallback_draw_data_2025.csv"
 df = pd.read_csv(csv_path)
-df['Draw Date'] = pd.to_datetime(df['Draw Date'])
+df["Draw Date"] = pd.to_datetime(df["Draw Date"])
 
-# --- Identify most recent draw ---
-latest_draw = df.sort_values(by="Draw Date", ascending=False).iloc[0]
-latest_draw_date = latest_draw['Draw Date'].strftime("%Y-%m-%d")
-category = latest_draw['Category']
-itas = latest_draw['ITAs Issued']
-crs = latest_draw['CRS Score']
+# Load last sent draw info
+last_sent_file = "last_sent.json"
+if os.path.exists(last_sent_file):
+    with open(last_sent_file, "r") as f:
+        last_sent = json.load(f)
+else:
+    last_sent = {"last_draw_date": "2000-01-01"}
 
-# --- Prepare email content ---
-subject = f"🧾 Express Entry Draw Update - {latest_draw_date}"
-body = (
-    f"🗓️ Draw Date: {latest_draw_date}\n"
-    f"📋 Category: {category}\n"
-    f"🎯 ITAs Issued: {itas}\n"
-    f"📊 CRS Score: {crs}\n"
-    "\nData Source: canada.ca (via fallback or real-time scraping)\n"
-)
+last_draw_date = pd.to_datetime(last_sent["last_draw_date"])
+latest_draw = df[df["Draw Date"] > last_draw_date].sort_values("Draw Date", ascending=False)
 
-def send_email(subject, body):
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = EMAIL_FROM
-    msg["To"] = EMAIL_TO
+if not latest_draw.empty or os.getenv("TEST_EMAIL", "false").lower() == "true":
+    print("New draw detected. Sending email alert...")
+
+    # Prepare email
+    msg = MIMEMultipart()
+    msg["From"] = os.getenv("EMAIL_SENDER")
+    msg["To"] = os.getenv("EMAIL_RECEIVER")
+    msg["Subject"] = "New Express Entry Draw Alert"
+
+    if latest_draw.empty:
+        content = "This is a test email to confirm your alert system works."
+    else:
+        latest = latest_draw.iloc[0]
+        content = f"""
+        A new Express Entry draw has been detected!
+
+        Draw Date: {latest['Draw Date'].strftime('%B %d, %Y')}
+        Category: {latest['Category']}
+        CRS Score: {latest['CRS Score']}
+        ITAs Issued: {latest['ITAs Issued']}
+        """
+
+    msg.attach(MIMEText(content, "plain"))
 
     try:
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(SMTP_HOST, int(SMTP_PORT), context=context) as server:
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(EMAIL_FROM, EMAIL_TO, msg.as_string())
-        print(f"✅ Email sent: {subject}")
+        server = smtplib.SMTP(os.getenv("EMAIL_HOST"), int(os.getenv("EMAIL_PORT", "587")))
+        server.starttls()
+        server.login(os.getenv("EMAIL_SENDER"), os.getenv("EMAIL_PASSWORD"))
+        server.send_message(msg)
+        server.quit()
+        print("Email sent successfully.")
+
+        if not latest_draw.empty:
+            # Update last sent record
+            with open(last_sent_file, "w") as f:
+                json.dump({"last_draw_date": latest["Draw Date"].strftime("%Y-%m-%d")}, f)
     except Exception as e:
-        print(f"❌ Failed to send email: {e}")
-
-# --- Check for new draw logic (simplified for fallback) ---
-today = datetime.utcnow().date()
-draw_date = latest_draw['Draw Date'].date()
-
-if TEST_EMAIL:
-    print("🧪 TEST_EMAIL=true, sending test alert.")
-    send_email("✅ Express Entry Test Email", "This is a test email to verify setup.")
-elif (today - draw_date).days <= 1:
-    print("📬 New draw detected. Sending email alert...")
-    send_email(subject, body)
+        print(f"Failed to send email: {e}")
 else:
-    print("⏸️ No new draw. Email not sent.")
+    print("No new draw found. No email sent.")
