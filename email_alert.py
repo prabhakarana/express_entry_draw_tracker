@@ -1,75 +1,74 @@
 import os
-import json
 import smtplib
-import pandas as pd
-from email.message import EmailMessage
+import json
 from datetime import datetime
+from email.message import EmailMessage
 
-# Load fallback data
-fallback_file = "fallback_draw_data_2025.csv"
-df = pd.read_csv(fallback_file)
-df["Draw Date"] = pd.to_datetime(df["Draw Date"])
-df.sort_values(by="Draw Date", ascending=False, inplace=True)
+# Load latest draw info
+with open("draw_data.json", "r") as f:
+    draw_data = json.load(f)
+
+latest_draw = draw_data[0]
 
 # Load last sent info
-try:
-    with open("last_sent.json", "r") as f:
-        last_sent = json.load(f)
-    last_draw_date = pd.to_datetime(last_sent["last_draw_date"])
-except (FileNotFoundError, KeyError, ValueError):
-    last_draw_date = pd.Timestamp.min
+with open("last_sent.json", "r") as f:
+    last_sent = json.load(f)
 
-# Get latest draw
-latest_draw = df.iloc[0]
-latest_draw_date = latest_draw["Draw Date"]
+last_sent_date = datetime.strptime(last_sent["last_draw_date"], "%Y-%m-%d").date()
+new_draw_date = datetime.strptime(latest_draw["Draw Date"], "%Y-%m-%d").date()
 
-# Check for new draw
-if latest_draw_date > last_draw_date:
-    print("📫 New draw detected. Sending email alert...")
+if new_draw_date > last_sent_date:
+    print("📬 New draw detected. Sending email alert...")
 
-    # Build subject and HTML content
-    subject = f"New Express Entry Draw – {latest_draw_date.date()}"
-    html_content = (
-        f"<h2>📢 New Express Entry Draw – {latest_draw_date.date()}</h2>\n"
-        f"<ul>\n"
-        f"<li><b>📄 Category:</b> {latest_draw['Category']}</li>\n"
-        f"<li><b>📅 Date:</b> {latest_draw['Draw Date'].date()}</li>\n"
-        f"<li><b>🎯 CRS:</b> {latest_draw['CRS Score']}</li>\n"
-        f"<li><b>🎟️ ITAs Issued:</b> {latest_draw['ITAs Issued']}</li>\n"
-        f"</ul>"
-    )
+    # Subject line — fallback if emoji breaks
+    subject = f"New Express Entry Draw – {latest_draw['Draw Date']}"
 
-    # Build email
+    # Plain-text fallback
+    plain_text = f"""New Express Entry Draw – {latest_draw['Draw Date']}
+Category: {latest_draw['Category']}
+Date: {latest_draw['Draw Date']}
+CRS: {latest_draw['CRS Score']}
+ITAs Issued: {latest_draw['ITAs Issued']}
+"""
+
+    # HTML version
+    html_content = f"""
+    <html>
+    <body>
+    <h2>📣 New Express Entry Draw – {latest_draw['Draw Date']}</h2>
+    <ul>
+        <li><b>🧾 Category:</b> {latest_draw['Category']}</li>
+        <li><b>📅 Date:</b> {latest_draw['Draw Date']}</li>
+        <li><b>🎯 CRS:</b> {latest_draw['CRS Score']}</li>
+        <li><b>🎟️ ITAs Issued:</b> {latest_draw['ITAs Issued']}</li>
+    </ul>
+    </body>
+    </html>
+    """
+
+    # Create email
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = os.getenv("SMTP_USER")
     msg["To"] = os.getenv("EMAIL_TO")
 
-    # Plain text fallback
-    msg.set_content("New Express Entry Draw detected. Check your email client for the full HTML version.")
-
-    # HTML version
-    msg.add_alternative(html_content, subtype="html")
+    msg.set_content(plain_text)
+    msg.add_alternative(html_content, subtype='html')
 
     try:
-        smtp_server = os.getenv("SMTP_SERVER", "smtp.zoho.com")
-        smtp_port = int(os.getenv("SMTP_PORT", "587"))
-        smtp_user = os.getenv("SMTP_USER")
-        smtp_pass = os.getenv("SMTP_PASS")
+        with smtplib.SMTP(os.getenv("SMTP_SERVER"), int(os.getenv("SMTP_PORT"))) as smtp:
+            smtp.ehlo()
+            smtp.starttls()
+            smtp.login(os.getenv("SMTP_USER"), os.getenv("SMTP_PASS"))
+            smtp.send_message(msg)
+        print("✅ Email sent successfully.")
 
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.send_message(msg)
-
-        print("✅ Email alert sent.")
-
-        # Update last_sent.json
+        # Update the last_sent.json
         with open("last_sent.json", "w") as f:
-            json.dump({"last_draw_date": latest_draw_date.strftime("%Y-%m-%d")}, f)
+            json.dump({"last_draw_date": latest_draw["Draw Date"]}, f)
+        print("✅ last_sent.json updated.")
 
-        print("📝 last_sent.json updated.")
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
 else:
-    print("✅ No new draw found. No email sent.")
+    print("📭 No new draw found. No email sent.")
