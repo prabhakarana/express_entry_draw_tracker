@@ -51,13 +51,27 @@ df = fetch_draws()
 if df.empty:
     st.error("No draw data available.")
 else:
+    df["Year"] = df["Draw Date"].dt.year
+    df["Quarter"] = df["Draw Date"].dt.to_period("Q").astype(str)
     pivot = df.groupby("Category").agg(
         Total_ITAs=pd.NamedAgg(column="ITAs Issued", aggfunc="sum"),
         Lowest_CRS=pd.NamedAgg(column="CRS Score", aggfunc="min"),
         Last_Draw=pd.NamedAgg(column="Draw Date", aggfunc="max")
     ).sort_values("Total_ITAs", ascending=False).reset_index()
+    pivot["Last_Draw"] = pivot["Last_Draw"].dt.strftime("%B %d, %Y")
+    df["Draw Date"] = df["Draw Date"].dt.strftime("%B %d, %Y")
 
+    st.markdown("### 🧾 Draw Summary by Category")
     st.dataframe(pivot, use_container_width=True)
 
-    st.subheader("📅 Draw History")
-    st.dataframe(df.sort_values("Draw Date", ascending=False).reset_index(drop=True), use_container_width=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("### 📅 Total Invitations by Year")
+        st.dataframe(df.groupby("Year")["ITAs Issued"].sum().reset_index(), use_container_width=True)
+
+    with col2:
+        st.markdown("### 📆 Total Invitations by Quarter")
+        st.dataframe(df.groupby("Quarter")["ITAs Issued"].sum().reset_index(), use_container_width=True)
+
+    st.markdown("### 📜 Draw History")
+    st.dataframe(df[["Draw Date", "Category", "ITAs Issued", "CRS Score"]].sort_values(by="Draw Date", ascending=False), use_container_width=True)
