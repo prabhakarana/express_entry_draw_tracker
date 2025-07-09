@@ -32,13 +32,12 @@ if latest_draw_date > last_draw_date or os.getenv("TEST_EMAIL", "false").lower()
     # Build email content
     subject = f"New Express Entry Draw - {latest_draw['Draw Date'].date()}"
     content = (
-        f"🧾 **Category**: {latest_draw['Category']}\n"
-        f"📅 **Date**: {latest_draw['Draw Date'].date()}\n"
-        f"🎯 **CRS**: {latest_draw['CRS Score']}\n"
-        f"🎟️ **ITAs Issued**: {latest_draw['ITAs Issued']}\n"
+        f"🧾 Category: {latest_draw['Category']}\n"
+        f"📅 Date: {latest_draw['Draw Date'].date()}\n"
+        f"🎯 CRS: {latest_draw['CRS Score']}\n"
+        f"🎟️ ITAs Issued: {latest_draw['ITAs Issued']}\n"
     )
 
-    # Create email
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = os.getenv("SMTP_USER")
@@ -46,14 +45,22 @@ if latest_draw_date > last_draw_date or os.getenv("TEST_EMAIL", "false").lower()
     msg.set_content(content)
 
     try:
-        with smtplib.SMTP_SSL(os.getenv("SMTP_SERVER"), int(os.getenv("SMTP_PORT"))) as smtp:
-            smtp.login(os.getenv("SMTP_USER"), os.getenv("SMTP_PASSWORD"))
+        smtp_server = os.getenv("SMTP_SERVER", "smtp.zoho.com")
+        smtp_port = int(os.getenv("SMTP_PORT", 465))
+        smtp_user = os.getenv("SMTP_USER")
+        smtp_pass = os.getenv("SMTP_PASSWORD")
+
+        # ✅ Secure SSL Connection (Zoho)
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as smtp:
+            smtp.login(smtp_user, smtp_pass)
             smtp.send_message(msg)
+
         print("✅ Email sent successfully.")
 
         # Update last sent record
         with open(last_sent_path, "w") as f:
             json.dump({"last_draw_date": str(latest_draw_date.date())}, f)
+
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
 else:
