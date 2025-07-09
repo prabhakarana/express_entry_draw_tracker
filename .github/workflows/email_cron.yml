@@ -28,3 +28,12 @@ jobs:
         SMTP_USER: ${{ secrets.SMTP_USER }}
         SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
       run: python email_alert.py
+    - name: Commit updated last_sent.json
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "github-actions@github.com"
+        git add last_sent.json
+        git commit -m "Update last_sent.json after email sent" || echo "No changes to commit"
+        git push
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
