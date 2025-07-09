@@ -1,74 +1,93 @@
 import os
-import smtplib
 import json
+import csv
+import smtplib
 from datetime import datetime
 from email.message import EmailMessage
 
-# Load latest draw info
-with open("draw_data.json", "r") as f:
-    draw_data = json.load(f)
+FALLBACK_CSV = "fallback_draw_data_2025.csv"
+LAST_SENT_FILE = "last_sent.json"
 
-latest_draw = draw_data[0]
+# Load latest draw data
+def load_draw_data():
+    data = []
+    if os.path.exists("draw_data.json"):
+        with open("draw_data.json", "r") as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                print("⚠️ draw_data.json is invalid. Falling back to CSV.")
+    if not data:
+        with open(FALLBACK_CSV, "r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                row["Draw Date"] = datetime.strptime(row["Draw Date"], "%Y-%m-%d")
+                data.append(row)
+    else:
+        for row in data:
+            row["Draw Date"] = datetime.strptime(row["Draw Date"], "%Y-%m-%d")
+    return data
 
-# Load last sent info
-with open("last_sent.json", "r") as f:
-    last_sent = json.load(f)
+# Load last sent draw date
+def load_last_sent():
+    if os.path.exists(LAST_SENT_FILE):
+        with open(LAST_SENT_FILE, "r") as f:
+            return json.load(f).get("last_draw_date")
+    return None
 
-last_sent_date = datetime.strptime(last_sent["last_draw_date"], "%Y-%m-%d").date()
-new_draw_date = datetime.strptime(latest_draw["Draw Date"], "%Y-%m-%d").date()
+# Save new last sent date
+def save_last_sent(date_str):
+    with open(LAST_SENT_FILE, "w") as f:
+        json.dump({"last_draw_date": date_str}, f)
 
-if new_draw_date > last_sent_date:
-    print("📬 New draw detected. Sending email alert...")
-
-    # Subject line — fallback if emoji breaks
-    subject = f"New Express Entry Draw – {latest_draw['Draw Date']}"
-
-    # Plain-text fallback
-    plain_text = f"""New Express Entry Draw – {latest_draw['Draw Date']}
-Category: {latest_draw['Category']}
-Date: {latest_draw['Draw Date']}
-CRS: {latest_draw['CRS Score']}
-ITAs Issued: {latest_draw['ITAs Issued']}
-"""
-
-    # HTML version
-    html_content = f"""
+# Send email
+def send_email(draw):
+    subject = f"New Express Entry Draw – {draw['Draw Date'].date()}"
+    html_content = f"""\
     <html>
-    <body>
-    <h2>📣 New Express Entry Draw – {latest_draw['Draw Date']}</h2>
-    <ul>
-        <li><b>🧾 Category:</b> {latest_draw['Category']}</li>
-        <li><b>📅 Date:</b> {latest_draw['Draw Date']}</li>
-        <li><b>🎯 CRS:</b> {latest_draw['CRS Score']}</li>
-        <li><b>🎟️ ITAs Issued:</b> {latest_draw['ITAs Issued']}</li>
-    </ul>
-    </body>
+        <body>
+            <h2>📢 New Express Entry Draw – {draw['Draw Date'].date()}</h2>
+            <ul>
+                <li><b>🧾 Category:</b> {draw['Category']}</li>
+                <li><b>📅 Date:</b> {draw['Draw Date'].date()}</li>
+                <li><b>🎯 CRS:</b> {draw['CRS Score']}</li>
+                <li><b>🎟️ ITAs Issued:</b> {draw['ITAs Issued']}</li>
+            </ul>
+        </body>
     </html>
     """
 
-    # Create email
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = os.getenv("SMTP_USER")
     msg["To"] = os.getenv("EMAIL_TO")
-
-    msg.set_content(plain_text)
-    msg.add_alternative(html_content, subtype='html')
+    msg.set_content("This is an HTML email. Please view it in an HTML-compatible client.")
+    msg.add_alternative(html_content, subtype="html")
 
     try:
-        with smtplib.SMTP(os.getenv("SMTP_SERVER"), int(os.getenv("SMTP_PORT"))) as smtp:
-            smtp.ehlo()
-            smtp.starttls()
-            smtp.login(os.getenv("SMTP_USER"), os.getenv("SMTP_PASS"))
-            smtp.send_message(msg)
-        print("✅ Email sent successfully.")
-
-        # Update the last_sent.json
-        with open("last_sent.json", "w") as f:
-            json.dump({"last_draw_date": latest_draw["Draw Date"]}, f)
-        print("✅ last_sent.json updated.")
-
+        with smtplib.SMTP(os.getenv("SMTP_HOST"), int(os.getenv("SMTP_PORT"))) as server:
+            server.starttls()
+            server.login(os.getenv("SMTP_USER"), os.getenv("SMTP_PASS"))
+            server.send_message(msg)
+            print("✅ Email sent successfully.")
+            return True
     except Exception as e:
         print(f"❌ Failed to send email: {e}")
+        return False
+
+# Main execution
+draw_data = load_draw_data()
+if not draw_data:
+    print("⚠️ No draw data found.")
+    exit(1)
+
+latest_draw = draw_data[0]
+last_sent = load_last_sent()
+
+if str(latest_draw["Draw Date"].date()) != last_sent:
+    print("📬 New draw detected. Sending email alert...")
+    success = send_email(latest_draw)
+    if success:
+        save_last_sent(str(latest_draw["Draw Date"].date()))
 else:
-    print("📭 No new draw found. No email sent.")
+    print("ℹ️ No new draw. No email sent.")
