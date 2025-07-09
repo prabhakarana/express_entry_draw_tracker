@@ -32,10 +32,13 @@ if latest_draw_date > last_draw_date or os.getenv("TEST_EMAIL", "false").lower()
     # Build email content
     subject = f"New Express Entry Draw - {latest_draw['Draw Date'].date()}"
     content = (
-        f"🧾 Category: {latest_draw['Category']}\n"
-        f"📅 Date: {latest_draw['Draw Date'].date()}\n"
-        f"🎯 CRS: {latest_draw['CRS Score']}\n"
-        f"🎟️ ITAs Issued: {latest_draw['ITAs Issued']}\n"
+        f"<h2>📢 New Express Entry Draw – {latest_draw['Draw Date'].date()}</h2>\n"
+        f"<ul>\n"
+        f"<li><b>🧾 Category:</b> {latest_draw['Category']}</li>\n"
+        f"<li><b>📅 Date:</b> {latest_draw['Draw Date'].date()}</li>\n"
+        f"<li><b>🎯 CRS:</b> {{latest_draw['CRS Score']}</li>\n"
+        f"<li><b>🎟️ ITAs Issued:</b> {latest_draw['ITAs Issued']}</li>\n"
+        f"</ul>\n"
     )
 
     msg = EmailMessage()
