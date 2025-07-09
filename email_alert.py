@@ -1,53 +1,65 @@
-import smtplib
-import json
-from email.message import EmailMessage
-from datetime import datetime
 import os
+import smtplib
+import ssl
+from email.mime.text import MIMEText
+import pandas as pd
+from datetime import datetime
 
-EMAIL_FROM = os.environ["EMAIL_FROM"]
-EMAIL_TO = os.environ["EMAIL_TO"]
-SMTP_HOST = os.environ["SMTP_HOST"]
-SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
-SMTP_USER = os.environ["SMTP_USER"]
-SMTP_PASSWORD = os.environ["SMTP_PASSWORD"]
+# --- Configuration from GitHub Secrets ---
+EMAIL_FROM = os.getenv("EMAIL_FROM")
+EMAIL_TO = os.getenv("EMAIL_TO")
+SMTP_HOST = os.getenv("SMTP_HOST")
+SMTP_PORT = os.getenv("SMTP_PORT", "465")
+SMTP_USER = os.getenv("SMTP_USER")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+TEST_EMAIL = os.getenv("TEST_EMAIL", "false").lower() == "true"
 
-with open("fallback_draw_data_2025.csv", "r") as f:
-    lines = f.readlines()[1:]
-    latest = lines[0].strip().split(",")
-    latest_draw = {
-        "date": latest[0],
-        "category": latest[1],
-        "itas": latest[2],
-        "crs_score": latest[3]
-    }
+# --- Load latest draw data ---
+csv_path = "data/express_entry_2025.csv"  # Adjust path if needed
+df = pd.read_csv(csv_path)
+df['Draw Date'] = pd.to_datetime(df['Draw Date'])
 
-try:
-    with open("last_sent.json", "r") as f:
-        last = json.load(f)
-except FileNotFoundError:
-    last = {}
+# --- Identify most recent draw ---
+latest_draw = df.sort_values(by="Draw Date", ascending=False).iloc[0]
+latest_draw_date = latest_draw['Draw Date'].strftime("%Y-%m-%d")
+category = latest_draw['Category']
+itas = latest_draw['ITAs Issued']
+crs = latest_draw['CRS Score']
 
-if latest_draw["date"] != last.get("date"):
-    msg = EmailMessage()
-    msg["Subject"] = f"🇨🇦 New Express Entry Draw – {latest_draw['date']}"
+# --- Prepare email content ---
+subject = f"🧾 Express Entry Draw Update - {latest_draw_date}"
+body = (
+    f"🗓️ Draw Date: {latest_draw_date}\n"
+    f"📋 Category: {category}\n"
+    f"🎯 ITAs Issued: {itas}\n"
+    f"📊 CRS Score: {crs}\n"
+    "\nData Source: canada.ca (via fallback or real-time scraping)\n"
+)
+
+def send_email(subject, body):
+    msg = MIMEText(body)
+    msg["Subject"] = subject
     msg["From"] = EMAIL_FROM
     msg["To"] = EMAIL_TO
-    msg.set_content(f"""
-New Express Entry Draw Detected!
 
-🗓 Date: {latest_draw['date']}
-📦 Category: {latest_draw['category']}
-📊 CRS Cutoff: {latest_draw['crs_score']}
-📬 ITAs Issued: {latest_draw['itas']}
-""")
+    try:
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(SMTP_HOST, int(SMTP_PORT), context=context) as server:
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(EMAIL_FROM, EMAIL_TO, msg.as_string())
+        print(f"✅ Email sent: {subject}")
+    except Exception as e:
+        print(f"❌ Failed to send email: {e}")
 
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as smtp:
-        smtp.starttls()
-        smtp.login(SMTP_USER, SMTP_PASSWORD)
-        smtp.send_message(msg)
+# --- Check for new draw logic (simplified for fallback) ---
+today = datetime.utcnow().date()
+draw_date = latest_draw['Draw Date'].date()
 
-    with open("last_sent.json", "w") as f:
-        json.dump(latest_draw, f)
-    print("✅ Email sent.")
+if TEST_EMAIL:
+    print("🧪 TEST_EMAIL=true, sending test alert.")
+    send_email("✅ Express Entry Test Email", "This is a test email to verify setup.")
+elif (today - draw_date).days <= 1:
+    print("📬 New draw detected. Sending email alert...")
+    send_email(subject, body)
 else:
-    print("No new draw.")
+    print("⏸️ No new draw. Email not sent.")
