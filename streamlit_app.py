@@ -1,87 +1,87 @@
 
 import streamlit as st
 import pandas as pd
-import altair as alt
-import os
+import matplotlib.pyplot as plt
+import seaborn as sns
 from io import BytesIO
+from datetime import datetime
+import os
 
-st.set_page_config(page_title="Express Entry Draw Tracker", layout="wide")
-st.title("📊 Express Entry Draw Tracker")
+st.set_page_config(layout="wide")
 
-# Load data
+# URLs
+data_url = "https://www.canada.ca/content/dam/ircc/documents/json/express-entry-rounds.json"
+fallback_path = "fallback_draw_data_2025.csv"
+
 @st.cache_data
 def load_data():
     try:
-        url = "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds.json"
-        df = pd.read_json(url)
-        df = df["Rounds of invitations"]
-        df = pd.json_normalize(df)
-        df.rename(columns={
-            "DrawNumber": "Draw #",
-            "DrawDate": "Draw Date",
-            "DrawCategory": "Category",
-            "InvitationsIssued": "ITAs Issued",
-            "CrsScore": "CRS Score"
-        }, inplace=True)
-        df["Draw Date"] = pd.to_datetime(df["Draw Date"])
-    except:
-        fallback_path = "/mnt/data/fallback_draw_data_2025.csv"
-        df = pd.read_csv(fallback_path)
-        df["Draw Date"] = pd.to_datetime(df["Draw Date"])
+        df_raw = pd.read_json(data_url)
+        rounds = df_raw["rounds"]
+        data = []
+        for r in rounds:
+            row = {
+                "Draw #": r.get("drawNumber", ""),
+                "Draw Date": pd.to_datetime(r.get("drawDate", ""), errors="coerce"),
+                "Category": r.get("drawType", ""),
+                "ITAs Issued": int(r.get("drawSize", 0)),
+                "CRS Score": int(r.get("drawScore", 0))
+            }
+            data.append(row)
+        df = pd.DataFrame(data)
+    except Exception:
+        st.warning("Live data not reachable. Loading fallback data.")
+        if os.path.exists(fallback_path):
+            df = pd.read_csv(fallback_path)
+            df["Draw Date"] = pd.to_datetime(df["Draw Date"], errors="coerce")
+        else:
+            st.error("Fallback file not found. Cannot continue.")
+            st.stop()
     return df
 
 df = load_data()
+df = df.dropna(subset=["Draw Date", "ITAs Issued"])
 
-# Sidebar filter by year
-st.sidebar.markdown("### 📅 Filter by Year")
-df["Year"] = df["Draw Date"].dt.year
-years = sorted(df["Year"].unique(), reverse=True)
-selected_years = st.sidebar.multiselect("Select years to include:", years, default=years)
-filtered = df[df["Year"].isin(selected_years)]
+# Sidebar Filters
+st.sidebar.header("📅 Filter by Year")
+years = df["Draw Date"].dt.year.sort_values(ascending=False).unique()
+selected_years = st.sidebar.multiselect("Select years to include:", years, default=years[:1])
 
-# Charts
-st.markdown("## 📈 Total Invitations by Year")
-yearly = filtered.groupby(filtered["Draw Date"].dt.year)["ITAs Issued"].sum().reset_index(name="ITAs Issued")
-bar = alt.Chart(yearly).mark_bar().encode(
-    x=alt.X("Draw Date:O", title="Year"),
-    y=alt.Y("ITAs Issued:Q"),
-    tooltip=["Draw Date", "ITAs Issued"]
-)
-labels = alt.Chart(yearly).mark_text(dy=-5).encode(
-    x="Draw Date:O", y="ITAs Issued:Q", text="ITAs Issued:Q"
-)
-st.altair_chart(alt.layer(bar, labels), use_container_width=True)
+filtered = df[df["Draw Date"].dt.year.isin(selected_years)]
 
-st.markdown("## 📉 Total Invitations by Quarter")
+# Total Invitations by Year
+st.subheader("📊 Total Invitations by Year")
+if not filtered.empty:
+    yearly = (
+        filtered.groupby(filtered["Draw Date"].dt.year)["ITAs Issued"]
+        .sum().reset_index(name="ITAs Issued")
+    )
+    fig1, ax1 = plt.subplots()
+    sns.barplot(data=yearly, x="Draw Date", y="ITAs Issued", ax=ax1)
+    ax1.set_xlabel("Year")
+    ax1.set_ylabel("ITAs Issued")
+    ax1.set_title("Total Invitations by Year")
+    st.pyplot(fig1)
+else:
+    st.info("No data for selected years.")
+
+# Total Invitations by Quarter
+st.subheader("📈 Total Invitations by Quarter")
+filtered["Quarter"] = filtered["Draw Date"].dt.to_period("Q").astype(str)
 quarterly = filtered.groupby("Quarter")["ITAs Issued"].sum().reset_index()
-st.dataframe(quarterly, use_container_width=True)
-chart_q = alt.Chart(quarterly).mark_bar().encode(
-    x=alt.X("Quarter:O"), y="ITAs Issued:Q", tooltip=["Quarter", "ITAs Issued"]
-)
-labels_q = alt.Chart(quarterly).mark_text(dy=-5).encode(
-    x="Quarter:O", y="ITAs Issued:Q", text="ITAs Issued:Q"
-)
-st.altair_chart(alt.layer(chart_q, labels_q), use_container_width=True)
+st.dataframe(quarterly)
+fig2, ax2 = plt.subplots()
+sns.barplot(data=quarterly, x="Quarter", y="ITAs Issued", ax=ax2)
+ax2.set_title("Quarterly Invitations")
+ax2.set_xlabel("Quarter")
+ax2.set_ylabel("ITAs Issued")
+st.pyplot(fig2)
 
-# Filtered Draw History
-st.markdown("## 🧾 Filtered Draw History")
-export_df = filtered[["Draw #", "Draw Date", "Category", "ITAs Issued", "CRS Score"]].copy()
-export_df = export_df.sort_values(by="Draw #", ascending=False)
-st.dataframe(export_df, use_container_width=True)
+# Draw History Table
+st.subheader("📜 Filtered Draw History")
+filtered_sorted = filtered.sort_values("Draw #", ascending=False).reset_index(drop=True)
+st.dataframe(filtered_sorted[["Draw #", "Draw Date", "Category", "ITAs Issued", "CRS Score"]])
 
-# Download buttons
-col_csv, col_xlsx, _ = st.columns([1, 1, 8])
-with col_csv:
-    csv = export_df.to_csv(index=False).encode("utf-8")
-    st.download_button("📄 CSV", data=csv, file_name="draw_history.csv", mime="text/csv")
-
-with col_xlsx:
-    try:
-        import xlsxwriter
-        buffer = BytesIO()
-        with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
-            export_df.to_excel(writer, index=False, sheet_name="DrawHistory")
-        st.download_button("📊 Excel", data=buffer.getvalue(), file_name="draw_history.xlsx",
-                           mime="application/vnd.ms-excel")
-    except ImportError:
-        st.warning("xlsxwriter not available for Excel export.")
+# Download as CSV
+csv_data = filtered_sorted.to_csv(index=False).encode("utf-8")
+st.download_button("Download CSV", data=csv_data, file_name="filtered_draw_history.csv", mime="text/csv")
