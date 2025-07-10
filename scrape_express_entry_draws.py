@@ -9,7 +9,6 @@ def scrape_express_entry_table():
     response = requests.get(URL)
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # Locate the correct table using class name or header ID
     table = soup.find("table")
     if not table:
         raise ValueError("Draw table not found on the page.")
@@ -25,10 +24,8 @@ def scrape_express_entry_table():
 
     df = pd.DataFrame(data, columns=headers)
 
-    # Rename columns for consistency
+    # Rename and clean columns
     df.columns = ["Draw #", "Draw Date", "Category", "ITAs Issued", "CRS Score"]
-
-    # Clean numeric columns
     df["ITAs Issued"] = df["ITAs Issued"].str.replace(",", "").astype(int)
     df["CRS Score"] = df["CRS Score"].str.extract("(\d+)").astype(float)
     df["Draw #"] = df["Draw #"].str.extract("(\d+)").astype(int)
