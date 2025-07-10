@@ -1,90 +1,74 @@
+
 import streamlit as st
 import pandas as pd
 import altair as alt
 from io import BytesIO
 
+# Set page config
 st.set_page_config(page_title="Express Entry Draw Tracker", layout="wide")
 
-# Load the CSV
-csv_file = "fallback_draw_data_2025.csv"
+# Load Data
+CSV_FILE = "fallback_draw_data_2025.csv"
 
 try:
-    df = pd.read_csv(csv_file)
-except FileNotFoundError:
-    st.error(f"CSV file '{csv_file}' not found.")
+    df = pd.read_csv(CSV_FILE)
+    df["Draw Date"] = pd.to_datetime(df["Draw Date"], errors='coerce')
+except Exception as e:
+    st.error("CSV missing one or more required columns or file not found.")
     st.stop()
 
-# Validate required columns
-required_cols = ["Draw Date", "Category", "Invitations issued", "CRS score of lowest-ranked candidate invited"]
-if not all(col in df.columns for col in required_cols):
+required_columns = {"Draw #", "Draw Date", "Category", "ITAs Issued", "CRS Score", "Quarter"}
+if not required_columns.issubset(df.columns):
     st.error("CSV missing one or more required columns.")
     st.stop()
 
-# Rename columns for internal consistency
-df.rename(columns={
-    "Invitations issued": "ITAs Issued",
-    "CRS score of lowest-ranked candidate invited": "CRS Score"
-}, inplace=True)
+# Yearly Summary
+yearly = df.groupby(df["Draw Date"].dt.year)["ITAs Issued"].sum().reset_index(name="ITAs Issued")
 
-# Convert Draw Date to datetime
-df["Draw Date"] = pd.to_datetime(df["Draw Date"], errors="coerce")
-df = df.dropna(subset=["Draw Date"])
+st.markdown("### 📊 Total Invitations by Year")
+chart = alt.Chart(yearly).mark_bar().encode(
+    x="Draw Date:O",
+    y="ITAs Issued:Q",
+    tooltip=["Draw Date", "ITAs Issued"]
+)
+st.altair_chart(chart, use_container_width=True)
 
-filtered = df.copy()
+# Quarterly Summary
+quarterly = df.groupby("Quarter")["ITAs Issued"].sum().reset_index()
+st.markdown("### 📈 Total Invitations by Quarter")
+st.dataframe(quarterly, use_container_width=True)
+chart_q = alt.Chart(quarterly).mark_bar().encode(
+    x=alt.X("Quarter:O"),
+    y="ITAs Issued:Q",
+    tooltip=["Quarter", "ITAs Issued"]
+)
+st.altair_chart(chart_q, use_container_width=True)
 
-st.title("📜 Filtered Draw History")
+# Filtered Table
+st.markdown("### 📜 Filtered Draw History")
+export_df = df[["Draw #", "Draw Date", "Category", "ITAs Issued", "CRS Score"]].sort_values(by="Draw Date", ascending=False)
+export_df["Draw Date"] = pd.to_datetime(export_df["Draw Date"], errors='coerce').dt.strftime('%b %d, %Y')
 
-# Summary Bar Charts
-col1, col2 = st.columns(2)
-
-with col1:
-    yearly = filtered.groupby(filtered["Draw Date"].dt.year)["ITAs Issued"].sum().reset_index()
-    st.markdown("### 📅 Total Invitations by Year")
-    st.dataframe(yearly, use_container_width=True)
-
-    chart = alt.Chart(yearly).mark_bar().encode(
-        x=alt.X("Draw Date:O", title="Year"),
-        y=alt.Y("ITAs Issued:Q")
-    )
-    st.altair_chart(chart, use_container_width=True)
-
-with col2:
-    quarterly = filtered.groupby(filtered["Draw Date"].dt.to_period("Q"))["ITAs Issued"].sum().reset_index()
-    quarterly["Quarter"] = quarterly["Draw Date"].astype(str)
-    st.markdown("### 📊 Total Invitations by Quarter")
-    st.dataframe(quarterly[["Quarter", "ITAs Issued"]], use_container_width=True)
-
-    chart_q = alt.Chart(quarterly).mark_bar().encode(
-        x=alt.X("Quarter:O"),
-        y=alt.Y("ITAs Issued:Q")
-    )
-    st.altair_chart(chart_q, use_container_width=True)
-
-# Table Display
-st.markdown("### 📋 Filtered Draw History")
-display_df = filtered[["Draw Date", "Category", "ITAs Issued", "CRS Score"]].copy()
-display_df["Draw Date"] = display_df["Draw Date"].dt.strftime("%b %d, %Y")
-
-# Add draw number from original index
-start_num = 355  # Adjust this based on your dataset
-display_df.insert(0, "Draw #", [f"#{start_num - i}" for i in range(len(display_df))])
-
-st.dataframe(display_df, use_container_width=True)
+# Reorder and reset index
+export_df.set_index("Draw #", inplace=True)
+export_df.index.name = "Draw #"
+st.dataframe(export_df, use_container_width=True)
 
 # Export Buttons
-col_csv, col_xlsx, _ = st.columns([1, 1, 8])
-
-with col_csv:
-    csv = display_df.to_csv(index=False).encode("utf-8")
-    st.download_button("📄 CSV", data=csv, file_name="draw_history.csv", mime="text/csv")
-
-with col_xlsx:
-    try:
-        import xlsxwriter
-        buffer = BytesIO()
-        with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
-            display_df.to_excel(writer, index=False, sheet_name="DrawHistory")
-            writer.close()
-        st.download_button("📊 Excel", data=buffer.getvalue(), file_name="draw_history.xlsx", mime="application/vnd.ms-excel")
-    except ImportError:
-        st.warning("Install `xlsxwriter` to enable Excel export.")
+col1, col2 = st.columns([8, 1])
+with col2:
+    col_csv, col_xlsx = st.columns(2)
+    with col_csv:
+        csv = export_df.to_csv().encode("utf-8")
+        st.download_button("📄 CSV", data=csv, file_name="draw_history.csv", mime="text/csv")
+    with col_xlsx:
+        try:
+            import xlsxwriter
+            buffer = BytesIO()
+            with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
+                export_df.to_excel(writer, sheet_name="DrawHistory")
+                writer.save()
+            st.download_button("📘 Excel", data=buffer.getvalue(), file_name="draw_history.xlsx",
+                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        except ImportError:
+            st.warning("xlsxwriter is not installed.")
