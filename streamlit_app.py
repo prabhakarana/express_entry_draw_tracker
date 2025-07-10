@@ -108,24 +108,24 @@ else:
         st.altair_chart(chart_q + labels_q, use_container_width=True)
 
     export_df = filtered[["Draw Date", "Category", "ITAs Issued", "CRS Score"]].sort_values(by="Draw Date", ascending=False)
-    st.markdown("## ⬇️ Export Draw History")
-
-    def convert_df(df):
-        return df.to_csv(index=False).encode("utf-8")
-
-    csv = convert_df(export_df)
-    st.download_button("📥 Download CSV", data=csv, file_name="draw_history.csv", mime="text/csv")
-
-    try:
-        import xlsxwriter
-        buffer = BytesIO()
-        with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
-            export_df.to_excel(writer, index=False, sheet_name="DrawHistory")
-        st.download_button("📥 Download Excel", data=buffer.getvalue(), file_name="draw_history.xlsx", mime="application/vnd.ms-excel")
-    except ImportError:
-        st.warning("Install `xlsxwriter` to enable Excel export.")
 
     st.markdown("## 📜 Filtered Draw History")
     st.dataframe(export_df, use_container_width=True)
+
+    # Right-aligned buttons
+    col1, col2, spacer, spacer2, btn1, btn2 = st.columns([0.5, 0.5, 2, 2, 1, 1])
+    with btn1:
+        csv = export_df.to_csv(index=False).encode("utf-8")
+        st.download_button("📥 CSV", data=csv, file_name="draw_history.csv", mime="text/csv")
+
+    with btn2:
+        try:
+            import xlsxwriter
+            buffer = BytesIO()
+            with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
+                export_df.to_excel(writer, index=False, sheet_name="DrawHistory")
+            st.download_button("📥 Excel", data=buffer.getvalue(), file_name="draw_history.xlsx", mime="application/vnd.ms-excel")
+        except ImportError:
+            st.warning("Install `xlsxwriter` to enable Excel export.")
 
     st.info("📧 Email alerts run automatically on weekdays at 8am and 6pm EST using GitHub Actions.")
