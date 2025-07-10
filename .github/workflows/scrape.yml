@@ -2,11 +2,11 @@ name: Daily Draw Scraper
 
 on:
   schedule:
-    # 8:00 AM EST = 13:00 UTC
+    # 8:00 AM EST (13:00 UTC), Monday–Friday
     - cron: '0 13 * * 1-5'
-    # 6:00 PM EST = 23:00 UTC
+    # 6:00 PM EST (23:00 UTC), Monday–Friday
     - cron: '0 23 * * 1-5'
-  workflow_dispatch:      # Allows manual trigger
+  workflow_dispatch:  # Allow manual trigger
 
 jobs:
   scrape-and-commit:
@@ -22,16 +22,15 @@ jobs:
           python-version: 3.10
 
       - name: Install Dependencies
-        run: |
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Run Scraper
         run: python scrape_express_entry_draws.py
 
-      - name: Commit and Push if Changed
+      - name: Commit and Push if Changes
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git add express_entry_draws.csv
-          git commit -m "🔄 Update draw data [CI]" || echo "No changes to commit"
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add -A
+          git diff --cached --quiet || git commit -m "🔄 Update Express Entry Draws"
           git push
