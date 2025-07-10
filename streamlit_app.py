@@ -1,94 +1,81 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
-import requests
+import altair as alt
 import json
-import os
 
-st.set_page_config(layout="wide")
-st.markdown("## 🍁 Express Entry Draw Tracker (Canada)")
-st.caption("Live tracking of Express Entry ITAs, CRS scores, and draw types.")
+# Page settings
+st.set_page_config(page_title="Express Entry Draw Tracker", layout="wide")
 
-DATA_URL = "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
-FALLBACK_FILE = "data/ee_rounds_123_en.json"
+# Title
+st.title("🍁 Express Entry Draw Tracker (Canada)")
+st.markdown("Live tracking of Express Entry ITAs, CRS scores, and draw types.")
 
-@st.cache_data
-def load_data():
-    try:
-        response = requests.get(DATA_URL, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        st.success("✅ Live data loaded.")
-    except Exception as e:
-        st.warning("⚠️ Could not fetch live data. Using existing file.")
-        if os.path.exists(FALLBACK_FILE):
-            with open(FALLBACK_FILE, "r") as f:
-                data = json.load(f)
-        else:
-            st.error("❌ Data file not found. Please run the scraper.")
-            return pd.DataFrame()
+# Load fallback JSON file
+fallback_file = "ee_rounds_123_en.json"
+try:
+    with open(fallback_file, "r") as file:
+        json_data = json.load(file)
+    st.success("✅ Live data loaded.")
+except Exception as e:
+    st.error("❌ Failed to load fallback JSON data.")
+    st.stop()
 
-    rounds = data.get("rounds", [])
-    records = []
-    for r in rounds:
-        try:
-            records.append({
-                "Draw #": r.get("drawNumber"),
-                "Draw Date": pd.to_datetime(r.get("drawDate"), errors="coerce"),
-                "Category": r.get("drawName"),
-                "ITAs Issued": pd.to_numeric(r.get("drawSize"), errors="coerce"),
-                "CRS Score": pd.to_numeric(r.get("drawCRS"), errors="coerce")
-            })
-        except Exception as err:
-            st.write(f"Skipping row due to error: {err}")
-    df = pd.DataFrame(records)
-    df = df.dropna(subset=["Draw Date", "ITAs Issued"])
-    return df
+# Normalize and preprocess
+df = pd.json_normalize(json_data["rounds"])
+df['drawDate'] = pd.to_datetime(df['date'])
+df['year'] = df['drawDate'].dt.year
+df['quarter'] = df['drawDate'].dt.to_period("Q").astype(str)
+df['ITAs'] = pd.to_numeric(df['invited'], errors='coerce')
+df['CRS'] = pd.to_numeric(df['drawCRS'], errors='coerce')
+df['Category'] = df['drawName']
 
-df = load_data()
-
-# Sidebar filter
+# Sidebar Filters
 st.sidebar.header("🔍 Filter Options")
-if not df.empty:
-    years = df["Draw Date"].dt.year.dropna().astype(int).unique()
-    years = sorted(years, reverse=True)
-    selected_years = st.sidebar.multiselect("Select Year(s)", years, default=years[:1])
-    filtered = df[df["Draw Date"].dt.year.isin(selected_years)]
-else:
-    st.info("No data available.")
-    filtered = pd.DataFrame()
+years = st.sidebar.multiselect("Select Year(s)", sorted(df['year'].unique()), default=sorted(df['year'].unique()))
+filtered_df = df[df['year'].isin(years)]
+
+# KPI Metrics
+col1, col2, col3, col4, col5 = st.columns(5)
+col1.metric("🧮 Total ITAs", f"{int(filtered_df['ITAs'].sum()):,}")
+col2.metric("📅 Total Draws", filtered_df.shape[0])
+col3.metric("🏆 Max ITAs", f"{int(filtered_df['ITAs'].max()):,}")
+col4.metric("🎯 Lowest CRS", int(filtered_df['CRS'].min()))
+col5.metric("🏷️ Top Category", filtered_df['Category'].value_counts().idxmax())
 
 # Draw History Table
-if not filtered.empty:
-    st.subheader("📜 Filtered Draw History")
-    filtered_sorted = filtered.sort_values("Draw #", ascending=False).reset_index(drop=True)
-    st.dataframe(filtered_sorted)
+st.subheader("📜 Filtered Draw History")
+st.dataframe(filtered_df[['drawDate', 'Category', 'ITAs', 'CRS']].sort_values(by="drawDate", ascending=False), use_container_width=True)
 
-    # Total Invitations by Quarter
-    st.subheader("📈 Total Invitations by Quarter")
-    filtered["Quarter"] = filtered["Draw Date"].dt.to_period("Q").astype(str)
-    quarterly = filtered.groupby("Quarter")["ITAs Issued"].sum().reset_index()
-    fig1, ax1 = plt.subplots()
-    sns.barplot(data=quarterly, x="Quarter", y="ITAs Issued", ax=ax1)
-    ax1.set_title("Total Invitations by Quarter")
-    ax1.set_xlabel("Quarter")
-    ax1.set_ylabel("Total ITAs")
-    plt.xticks(rotation=45)
-    st.pyplot(fig1)
+# Chart: Total ITAs by Quarter
+st.subheader("📈 Total Invitations by Quarter")
+quarterly = filtered_df.groupby("quarter")["ITAs"].sum().reset_index()
+fig1, ax1 = plt.subplots()
+ax1.bar(quarterly['quarter'], quarterly['ITAs'])
+ax1.set_xlabel("Quarter")
+ax1.set_ylabel("Total ITAs")
+ax1.set_title("Total Invitations by Quarter")
+plt.xticks(rotation=45)
+st.pyplot(fig1)
 
-    # Total ITAs by Year
-    st.subheader("📊 Total Invitations by Year")
-    yearly = filtered.groupby(filtered["Draw Date"].dt.year)["ITAs Issued"].sum().reset_index()
-    yearly.columns = ["Year", "Total ITAs"]
-    fig2, ax2 = plt.subplots()
-    sns.barplot(data=yearly, x="Year", y="Total ITAs", ax=ax2)
-    ax2.set_title("Total ITAs by Year")
-    ax2.set_ylabel("ITAs")
-    st.pyplot(fig2)
+# Chart: Total ITAs by Year
+st.subheader("📊 Total Invitations by Year")
+yearly = filtered_df.groupby("year")["ITAs"].sum().reset_index()
+fig2, ax2 = plt.subplots()
+ax2.bar(yearly['year'].astype(str), yearly['ITAs'])
+ax2.set_xlabel("Year")
+ax2.set_ylabel("ITAs")
+ax2.set_title("Total ITAs by Year")
+st.pyplot(fig2)
 
-    # Download Button
-    csv = filtered_sorted.to_csv(index=False).encode("utf-8")
-    st.download_button("📥 Download CSV", data=csv, file_name="express_entry_filtered.csv", mime="text/csv")
-else:
-    st.info("No data available for the selected year(s).")
+# Chart: Min CRS by Category
+st.subheader("📉 Lowest CRS Score by Category")
+min_crs_by_category = filtered_df.groupby("Category")["CRS"].min().reset_index()
+fig3, ax3 = plt.subplots()
+ax3.barh(min_crs_by_category["Category"], min_crs_by_category["CRS"])
+ax3.set_xlabel("CRS Score")
+ax3.set_title("Lowest CRS by Category")
+st.pyplot(fig3)
+
+# Download button
+st.download_button("📥 Download CSV", data=filtered_df.to_csv(index=False), file_name="express_entry_draws.csv")
