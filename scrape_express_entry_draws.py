@@ -2,46 +2,39 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 
-# URL of the Express Entry rounds page
-url = "https://www.canada.ca/en/immigration-refugees-citizenship/corporate/mandate/policies-operational-instructions-agreements/ministerial-instructions/express-entry-rounds.html"
+URL = "https://www.canada.ca/en/immigration-refugees-citizenship/corporate/mandate/policies-operational-instructions-agreements/ministerial-instructions/express-entry-rounds.html"
+CSV_FILE = "express_entry_draws.csv"
 
-# Fetch the page
-response = requests.get(url)
-response.raise_for_status()  # Raise error for bad response
+def scrape_express_entry_table():
+    response = requests.get(URL)
+    soup = BeautifulSoup(response.text, "html.parser")
 
-# Parse HTML
-soup = BeautifulSoup(response.content, "html.parser")
+    # Locate the correct table using class name or header ID
+    table = soup.find("table")
+    if not table:
+        raise ValueError("Draw table not found on the page.")
 
-# Find the first table (adjust index if necessary)
-tables = soup.find_all("table")
-if not tables:
-    raise Exception("No table found on the page.")
+    rows = table.find_all("tr")
+    headers = [th.text.strip() for th in rows[0].find_all("th")]
 
-# Read the HTML table using pandas
-df = pd.read_html(str(tables[0]))[0]
+    data = []
+    for row in rows[1:]:
+        cols = [td.get_text(strip=True) for td in row.find_all("td")]
+        if len(cols) == len(headers):
+            data.append(cols)
 
-# Rename columns for clarity (optional based on real column headers)
-df.columns = [col.strip() for col in df.columns]
+    df = pd.DataFrame(data, columns=headers)
 
-# Example cleanup if column names are:
-# ['Draw number', 'Date', 'Round type', 'Number of invitations issued', 'CRS score of lowest-ranked candidate invited']
-rename_map = {
-    'Draw number': 'Draw #',
-    'Date': 'Draw Date',
-    'Round type': 'Category',
-    'Number of invitations issued': 'ITAs Issued',
-    'CRS score of lowest-ranked candidate invited': 'CRS Score'
-}
-df.rename(columns=rename_map, inplace=True)
+    # Rename columns for consistency
+    df.columns = ["Draw #", "Draw Date", "Category", "ITAs Issued", "CRS Score"]
 
-# Clean fields
-df["Draw Date"] = pd.to_datetime(df["Draw Date"], errors='coerce')
-df["ITAs Issued"] = pd.to_numeric(df["ITAs Issued"].str.replace(",", ""), errors='coerce')
-df["CRS Score"] = pd.to_numeric(df["CRS Score"], errors='coerce')
+    # Clean numeric columns
+    df["ITAs Issued"] = df["ITAs Issued"].str.replace(",", "").astype(int)
+    df["CRS Score"] = df["CRS Score"].str.extract("(\d+)").astype(float)
+    df["Draw #"] = df["Draw #"].str.extract("(\d+)").astype(int)
 
-# Drop rows with no date
-df = df.dropna(subset=["Draw Date"])
+    df.to_csv(CSV_FILE, index=False)
+    print(f"✅ Scraped and saved {len(df)} records to {CSV_FILE}")
 
-# Save to CSV
-df.to_csv("express_entry_draws.csv", index=False)
-print("✅ Data saved to express_entry_draws.csv")
+if __name__ == "__main__":
+    scrape_express_entry_table()
