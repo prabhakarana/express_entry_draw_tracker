@@ -1,9 +1,7 @@
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
-from io import BytesIO
+import altair as alt
 from datetime import datetime
 import os
 
@@ -39,43 +37,44 @@ def load_data():
             st.stop()
     return df
 
+# Load and clean
 df = load_data()
 df = df.dropna(subset=["Draw Date", "ITAs Issued"])
+df["Year"] = df["Draw Date"].dt.year
+df["Quarter"] = df["Draw Date"].dt.to_period("Q").astype(str)
 
 # Sidebar Filters
 st.sidebar.header("📅 Filter by Year")
-years = df["Draw Date"].dt.year.sort_values(ascending=False).unique()
+years = df["Year"].sort_values(ascending=False).unique()
 selected_years = st.sidebar.multiselect("Select years to include:", years, default=years[:1])
 
-filtered = df[df["Draw Date"].dt.year.isin(selected_years)]
+filtered = df[df["Year"].isin(selected_years)]
 
 # Total Invitations by Year
 st.subheader("📊 Total Invitations by Year")
 if not filtered.empty:
-    yearly = (
-        filtered.groupby(filtered["Draw Date"].dt.year)["ITAs Issued"]
-        .sum().reset_index(name="ITAs Issued")
-    )
-    fig1, ax1 = plt.subplots()
-    sns.barplot(data=yearly, x="Draw Date", y="ITAs Issued", ax=ax1)
-    ax1.set_xlabel("Year")
-    ax1.set_ylabel("ITAs Issued")
-    ax1.set_title("Total Invitations by Year")
-    st.pyplot(fig1)
+    yearly = filtered.groupby("Year")["ITAs Issued"].sum().reset_index()
+    bar_chart = alt.Chart(yearly).mark_bar().encode(
+        x=alt.X("Year:O", title="Year"),
+        y=alt.Y("ITAs Issued:Q", title="ITAs Issued"),
+        tooltip=["Year", "ITAs Issued"]
+    ).properties(width=700, height=400)
+    st.altair_chart(bar_chart)
 else:
     st.info("No data for selected years.")
 
 # Total Invitations by Quarter
 st.subheader("📈 Total Invitations by Quarter")
-filtered["Quarter"] = filtered["Draw Date"].dt.to_period("Q").astype(str)
 quarterly = filtered.groupby("Quarter")["ITAs Issued"].sum().reset_index()
 st.dataframe(quarterly)
-fig2, ax2 = plt.subplots()
-sns.barplot(data=quarterly, x="Quarter", y="ITAs Issued", ax=ax2)
-ax2.set_title("Quarterly Invitations")
-ax2.set_xlabel("Quarter")
-ax2.set_ylabel("ITAs Issued")
-st.pyplot(fig2)
+
+fig, ax = plt.subplots(figsize=(10, 4))
+ax.bar(quarterly["Quarter"], quarterly["ITAs Issued"], color="steelblue")
+ax.set_xlabel("Quarter")
+ax.set_ylabel("ITAs Issued")
+ax.set_title("Quarterly Invitations")
+plt.xticks(rotation=45)
+st.pyplot(fig)
 
 # Draw History Table
 st.subheader("📜 Filtered Draw History")
