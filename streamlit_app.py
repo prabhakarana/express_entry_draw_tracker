@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
@@ -7,15 +6,15 @@ import altair as alt
 from io import BytesIO
 import base64
 
-st.set_page_config(page_title="Express Entry Draw Tracker", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Express Entry Draw Tracker", layout="wide")
 
-# Load theme toggle
+# Dark mode toggle
 dark_mode = st.sidebar.checkbox("🌙 Enable Dark Mode", value=False)
 if dark_mode:
     st.markdown("<style>body { background-color: #111; color: #eee; }</style>", unsafe_allow_html=True)
 
-st.title("🍁 Canada Express Entry Draw Tracker (Live + Fallback)")
-st.markdown("Real-time ITA history by category, CRS, and draw date. Falls back to 2025 data if Canada.ca is unreachable.")
+st.title("Canada Express Entry Draw Tracker")
+st.markdown("Real-time ITA history by category, CRS, and draw date. Falls back to local 2025 data if live fetch fails.")
 
 @st.cache_data(ttl=3600)
 def fetch_draws():
@@ -64,7 +63,7 @@ else:
     df["Quarter"] = df["Draw Date"].dt.to_period("Q").astype(str)
 
     with st.sidebar:
-        st.markdown("### 🔍 Filter Options")
+        st.markdown("### Filter Options")
         selected_year = st.multiselect("Filter by Year", options=sorted(df["Year"].unique()), default=sorted(df["Year"].unique()))
         crs_min, crs_max = int(df["CRS Score"].min()), int(df["CRS Score"].max())
         selected_crs = st.slider("CRS Score Range", min_value=crs_min, max_value=crs_max, value=(crs_min, crs_max))
@@ -77,40 +76,43 @@ else:
         Last_Draw=pd.NamedAgg(column="Draw Date", aggfunc="max")
     ).sort_values("Total_ITAs", ascending=False).reset_index()
     pivot["Last_Draw"] = pivot["Last_Draw"].dt.strftime("%B %d, %Y")
-    filtered["Draw Date"] = pd.to_datetime(filtered["Draw Date"]).dt.strftime("%B %d, %Y")
 
-    st.markdown("### 🧾 Draw Summary by Category")
+    st.markdown("## Summary by Category")
     st.dataframe(pivot, use_container_width=True)
 
     col1, col2 = st.columns(2)
     with col1:
         yearly = filtered.groupby("Year")["ITAs Issued"].sum().reset_index()
-        st.markdown("### 📅 Total Invitations by Year")
-        st.dataframe(yearly, use_container_width=True)
-
-        bar = alt.Chart(yearly).mark_bar(color="#1E88E5").encode(
-            x="Year:O", y="ITAs Issued:Q", tooltip=["Year", "ITAs Issued"]
-        )
-        label = alt.Chart(yearly).mark_text(dy=-5, fontSize=12).encode(
+        st.markdown("## Total ITAs by Year")
+        chart = alt.Chart(yearly).mark_bar(size=40).encode(
+            x=alt.X("Year:O", title="Year"),
+            y=alt.Y("ITAs Issued:Q", title="Invitations Issued"),
+            tooltip=["Year", "ITAs Issued"]
+        ).properties(height=350)
+        labels = alt.Chart(yearly).mark_text(
+            dy=-10, size=12
+        ).encode(
             x="Year:O", y="ITAs Issued:Q", text="ITAs Issued:Q"
         )
-        st.altair_chart(alt.layer(bar, label), use_container_width=True)
+        st.altair_chart(chart + labels, use_container_width=True)
 
     with col2:
         quarterly = filtered.groupby("Quarter")["ITAs Issued"].sum().reset_index()
-        st.markdown("### 📆 Total Invitations by Quarter")
-        st.dataframe(quarterly, use_container_width=True)
-
-        bar_q = alt.Chart(quarterly).mark_bar(color="#43A047").encode(
-            x="Quarter:O", y="ITAs Issued:Q", tooltip=["Quarter", "ITAs Issued"]
-        )
-        label_q = alt.Chart(quarterly).mark_text(dy=-5, fontSize=12).encode(
+        st.markdown("## Total ITAs by Quarter")
+        chart = alt.Chart(quarterly).mark_bar(size=35).encode(
+            x=alt.X("Quarter:O", title="Quarter"),
+            y=alt.Y("ITAs Issued:Q", title="Invitations Issued"),
+            tooltip=["Quarter", "ITAs Issued"]
+        ).properties(height=350)
+        labels = alt.Chart(quarterly).mark_text(
+            dy=-10, size=12
+        ).encode(
             x="Quarter:O", y="ITAs Issued:Q", text="ITAs Issued:Q"
         )
-        st.altair_chart(alt.layer(bar_q, label_q), use_container_width=True)
+        st.altair_chart(chart + labels, use_container_width=True)
 
-    st.markdown("### ⬇️ Export Draw History")
     export_df = filtered[["Draw Date", "Category", "ITAs Issued", "CRS Score"]].sort_values(by="Draw Date", ascending=False)
+    st.markdown("## Export Draw History")
 
     def convert_df(df):
         return df.to_csv(index=False).encode("utf-8")
@@ -125,9 +127,9 @@ else:
             export_df.to_excel(writer, index=False, sheet_name="DrawHistory")
         st.download_button("📥 Download Excel", data=buffer.getvalue(), file_name="draw_history.xlsx", mime="application/vnd.ms-excel")
     except ImportError:
-        st.warning("Install xlsxwriter to enable Excel export.")
+        st.warning("Install `xlsxwriter` to enable Excel export.")
 
-    st.markdown("### 📜 Filtered Draw History")
+    st.markdown("## Filtered Draw History")
     st.dataframe(export_df, use_container_width=True)
 
-    st.info("📧 Email alert and auto-summary features require external backend setup (e.g., via GitHub Actions, Zapier, or AWS Lambda).")
+    st.info("Email alerts are triggered by GitHub Actions. You can monitor scheduled jobs in `.github/workflows/email_alert.yml`.")
