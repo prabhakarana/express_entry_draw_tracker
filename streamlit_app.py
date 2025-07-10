@@ -4,7 +4,6 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import altair as alt
 from io import BytesIO
-import base64
 
 st.set_page_config(page_title="Express Entry Draw Tracker", layout="wide")
 
@@ -75,44 +74,41 @@ else:
         Lowest_CRS=pd.NamedAgg(column="CRS Score", aggfunc="min"),
         Last_Draw=pd.NamedAgg(column="Draw Date", aggfunc="max")
     ).sort_values("Total_ITAs", ascending=False).reset_index()
-    pivot["Last_Draw"] = pivot["Last_Draw"].dt.strftime("%B %d, %Y")
+    pivot["Last_Draw"] = pivot["Last_Draw"].dt.strftime("%b %d, %Y")
 
-    st.markdown("## Summary by Category")
+    st.markdown("## 🧾 Draw Summary by Category")
     st.dataframe(pivot, use_container_width=True)
 
     col1, col2 = st.columns(2)
+
     with col1:
         yearly = filtered.groupby("Year")["ITAs Issued"].sum().reset_index()
-        st.markdown("## Total ITAs by Year")
+        st.markdown("## 📅 Total Invitations by Year")
         chart = alt.Chart(yearly).mark_bar(size=40).encode(
             x=alt.X("Year:O", title="Year"),
-            y=alt.Y("ITAs Issued:Q", title="Invitations Issued"),
+            y=alt.Y("ITAs Issued:Q", title="Invitations"),
             tooltip=["Year", "ITAs Issued"]
-        ).properties(height=350)
-        labels = alt.Chart(yearly).mark_text(
-            dy=-10, size=12
-        ).encode(
-            x="Year:O", y="ITAs Issued:Q", text="ITAs Issued:Q"
         )
+        labels = chart.mark_text(
+            align='center', dy=-10, size=12
+        ).encode(text="ITAs Issued:Q")
         st.altair_chart(chart + labels, use_container_width=True)
 
     with col2:
         quarterly = filtered.groupby("Quarter")["ITAs Issued"].sum().reset_index()
-        st.markdown("## Total ITAs by Quarter")
-        chart = alt.Chart(quarterly).mark_bar(size=35).encode(
+        st.markdown("## 📆 Total Invitations by Quarter")
+        chart_q = alt.Chart(quarterly).mark_bar(size=35).encode(
             x=alt.X("Quarter:O", title="Quarter"),
-            y=alt.Y("ITAs Issued:Q", title="Invitations Issued"),
+            y=alt.Y("ITAs Issued:Q", title="Invitations"),
             tooltip=["Quarter", "ITAs Issued"]
-        ).properties(height=350)
-        labels = alt.Chart(quarterly).mark_text(
-            dy=-10, size=12
-        ).encode(
-            x="Quarter:O", y="ITAs Issued:Q", text="ITAs Issued:Q"
         )
-        st.altair_chart(chart + labels, use_container_width=True)
+        labels_q = chart_q.mark_text(
+            align='center', dy=-10, size=12
+        ).encode(text="ITAs Issued:Q")
+        st.altair_chart(chart_q + labels_q, use_container_width=True)
 
     export_df = filtered[["Draw Date", "Category", "ITAs Issued", "CRS Score"]].sort_values(by="Draw Date", ascending=False)
-    st.markdown("## Export Draw History")
+    st.markdown("## ⬇️ Export Draw History")
 
     def convert_df(df):
         return df.to_csv(index=False).encode("utf-8")
@@ -129,7 +125,7 @@ else:
     except ImportError:
         st.warning("Install `xlsxwriter` to enable Excel export.")
 
-    st.markdown("## Filtered Draw History")
+    st.markdown("## 📜 Filtered Draw History")
     st.dataframe(export_df, use_container_width=True)
 
-    st.info("Email alerts are triggered by GitHub Actions. You can monitor scheduled jobs in `.github/workflows/email_alert.yml`.")
+    st.info("📧 Email alerts run automatically on weekdays at 8am and 6pm EST using GitHub Actions.")
