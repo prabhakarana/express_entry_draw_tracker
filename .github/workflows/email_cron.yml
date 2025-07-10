@@ -3,9 +3,9 @@ name: Run email alert script twice a day (8am & 6pm EST)
 on:
   schedule:
     # 8:00 AM EST = 13:00 UTC
-    - cron: '0 13 * * 1-5'
+    - cron: '0 14 * * 1-5'
     # 6:00 PM EST = 23:00 UTC
-    - cron: '0 23 * * 1-5'
+    - cron: '0 00 * * 1-5'
 
   workflow_dispatch:  # Optional: Manual trigger from GitHub UI
 
