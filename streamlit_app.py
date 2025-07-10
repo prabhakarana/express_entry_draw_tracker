@@ -64,5 +64,5 @@ with col3:
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
         export_df.to_excel(writer, index=False, sheet_name="DrawHistory")
-        writer.save()
+        writer.book.close()
     st.download_button("📊 Excel", buffer.getvalue(), "draw_history.xlsx", "application/vnd.ms-excel")
