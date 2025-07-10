@@ -1,39 +1,40 @@
-name: Daily Express Entry Email Alert
+name: Run email alert script twice a day (8am & 6pm EST)
 
 on:
   schedule:
-    - cron: "0 14 * * *"
-  workflow_dispatch:
+    # 8:00 AM EST = 13:00 UTC
+    - cron: '0 13 * * 1-5'
+    # 6:00 PM EST = 23:00 UTC
+    - cron: '0 23 * * 1-5'
+
+  workflow_dispatch:  # Optional: Manual trigger from GitHub UI
 
 jobs:
-  send_email:
+  run-email-alert:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.11
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-    - name: Install dependencies
-      run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-    - name: Run email alert script
-      env:
-        EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
-        EMAIL_TO: ${{ secrets.EMAIL_TO }}
-        SMTP_HOST: ${{ secrets.SMTP_HOST }}
-        SMTP_PORT: ${{ secrets.SMTP_PORT }}
-        SMTP_USER: ${{ secrets.SMTP_USER }}
-        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-      run: python email_alert.py
-    - name: Commit updated last_sent.json
-      run: |
-        git config --global user.name "github-actions"
-        git config --global user.email "github-actions@github.com"
-        git add last_sent.json
-        git commit -m "Update last_sent.json after email sent" || echo "No changes to commit"
-        git push
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run email alert script
+        run: python email_alert.py
+
+      - name: Commit updated last_sent.json
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git pull
+          git add last_sent.json
+          git commit -m "Update last_sent.json" || echo "No changes"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
