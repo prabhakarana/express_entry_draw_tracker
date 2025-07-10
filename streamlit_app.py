@@ -1,15 +1,17 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import requests
 import json
 import os
-import altair as alt
-import requests
 
 st.set_page_config(layout="wide")
+st.markdown("## 🍁 Express Entry Draw Tracker (Canada)")
+st.caption("Live tracking of Express Entry ITAs, CRS scores, and draw types.")
 
-# URLs and file paths
 DATA_URL = "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
-FALLBACK_FILE = "data/ee_rounds_123_en.json"  # relative to root of your Git repo
+FALLBACK_FILE = "data/ee_rounds_123_en.json"
 
 @st.cache_data
 def load_data():
@@ -17,68 +19,76 @@ def load_data():
         response = requests.get(DATA_URL, timeout=10)
         response.raise_for_status()
         data = response.json()
-    except Exception:
-        st.warning("⚠️ Could not fetch live data. Using fallback file.")
+        st.success("✅ Live data loaded.")
+    except Exception as e:
+        st.warning("⚠️ Could not fetch live data. Using existing file.")
         if os.path.exists(FALLBACK_FILE):
             with open(FALLBACK_FILE, "r") as f:
                 data = json.load(f)
         else:
-            st.error("❌ Fallback data file not found. Please add it under `data/`.")
+            st.error("❌ Data file not found. Please run the scraper.")
             return pd.DataFrame()
 
     rounds = data.get("rounds", [])
-    df = pd.DataFrame([{
-        "Draw #": r.get("drawNumber"),
-        "Draw Date": pd.to_datetime(r.get("drawDate"), errors="coerce"),
-        "Category": r.get("drawType"),
-        "ITAs Issued": pd.to_numeric(r.get("drawSize"), errors="coerce"),
-        "CRS Score": pd.to_numeric(r.get("drawScore"), errors="coerce")
-    } for r in rounds])
-
-    return df.dropna(subset=["Draw Date", "ITAs Issued"])
+    records = []
+    for r in rounds:
+        try:
+            records.append({
+                "Draw #": r.get("drawNumber"),
+                "Draw Date": pd.to_datetime(r.get("drawDate"), errors="coerce"),
+                "Category": r.get("drawName"),
+                "ITAs Issued": pd.to_numeric(r.get("drawSize"), errors="coerce"),
+                "CRS Score": pd.to_numeric(r.get("drawCRS"), errors="coerce")
+            })
+        except Exception as err:
+            st.write(f"Skipping row due to error: {err}")
+    df = pd.DataFrame(records)
+    df = df.dropna(subset=["Draw Date", "ITAs Issued"])
+    return df
 
 df = load_data()
 
-if df.empty:
-    st.stop()
-
-# Sidebar
-st.sidebar.header("📅 Filter by Year")
-years = df["Draw Date"].dt.year.sort_values(ascending=False).unique()
-selected_years = st.sidebar.multiselect("Select years to include:", years, default=years[:1])
-filtered = df[df["Draw Date"].dt.year.isin(selected_years)]
-
-# Yearly Summary
-st.subheader("📊 Total Invitations by Year")
-if not filtered.empty:
-    yearly = filtered.groupby(filtered["Draw Date"].dt.year)["ITAs Issued"].sum().reset_index()
-    chart = alt.Chart(yearly).mark_bar().encode(
-        x=alt.X("Draw Date:O", title="Year"),
-        y=alt.Y("ITAs Issued:Q"),
-        tooltip=["Draw Date", "ITAs Issued"]
-    ).properties(title="Total Invitations by Year")
-    st.altair_chart(chart, use_container_width=True)
+# Sidebar filter
+st.sidebar.header("🔍 Filter Options")
+if not df.empty:
+    years = df["Draw Date"].dt.year.dropna().astype(int).unique()
+    years = sorted(years, reverse=True)
+    selected_years = st.sidebar.multiselect("Select Year(s)", years, default=years[:1])
+    filtered = df[df["Draw Date"].dt.year.isin(selected_years)]
 else:
-    st.info("No data for selected years.")
+    st.info("No data available.")
+    filtered = pd.DataFrame()
 
-# Quarterly Summary
-st.subheader("📈 Total Invitations by Quarter")
-filtered["Quarter"] = filtered["Draw Date"].dt.to_period("Q").astype(str)
-quarterly = filtered.groupby("Quarter")["ITAs Issued"].sum().reset_index()
-st.dataframe(quarterly)
+# Draw History Table
+if not filtered.empty:
+    st.subheader("📜 Filtered Draw History")
+    filtered_sorted = filtered.sort_values("Draw #", ascending=False).reset_index(drop=True)
+    st.dataframe(filtered_sorted)
 
-chart2 = alt.Chart(quarterly).mark_bar().encode(
-    x="Quarter",
-    y="ITAs Issued",
-    tooltip=["Quarter", "ITAs Issued"]
-).properties(title="Quarterly Invitations")
-st.altair_chart(chart2, use_container_width=True)
+    # Total Invitations by Quarter
+    st.subheader("📈 Total Invitations by Quarter")
+    filtered["Quarter"] = filtered["Draw Date"].dt.to_period("Q").astype(str)
+    quarterly = filtered.groupby("Quarter")["ITAs Issued"].sum().reset_index()
+    fig1, ax1 = plt.subplots()
+    sns.barplot(data=quarterly, x="Quarter", y="ITAs Issued", ax=ax1)
+    ax1.set_title("Total Invitations by Quarter")
+    ax1.set_xlabel("Quarter")
+    ax1.set_ylabel("Total ITAs")
+    plt.xticks(rotation=45)
+    st.pyplot(fig1)
 
-# Draw Table
-st.subheader("📜 Filtered Draw History")
-filtered_sorted = filtered.sort_values("Draw #", ascending=False).reset_index(drop=True)
-st.dataframe(filtered_sorted[["Draw #", "Draw Date", "Category", "ITAs Issued", "CRS Score"]])
+    # Total ITAs by Year
+    st.subheader("📊 Total Invitations by Year")
+    yearly = filtered.groupby(filtered["Draw Date"].dt.year)["ITAs Issued"].sum().reset_index()
+    yearly.columns = ["Year", "Total ITAs"]
+    fig2, ax2 = plt.subplots()
+    sns.barplot(data=yearly, x="Year", y="Total ITAs", ax=ax2)
+    ax2.set_title("Total ITAs by Year")
+    ax2.set_ylabel("ITAs")
+    st.pyplot(fig2)
 
-# CSV Download
-csv_data = filtered_sorted.to_csv(index=False).encode("utf-8")
-st.download_button("Download CSV", data=csv_data, file_name="filtered_draw_history.csv", mime="text/csv")
+    # Download Button
+    csv = filtered_sorted.to_csv(index=False).encode("utf-8")
+    st.download_button("📥 Download CSV", data=csv, file_name="express_entry_filtered.csv", mime="text/csv")
+else:
+    st.info("No data available for the selected year(s).")
