@@ -5,3 +5,4 @@ requests
 altair
 xlsxwriter
 matplotlib
+seaborn
