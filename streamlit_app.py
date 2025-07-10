@@ -7,7 +7,7 @@ from io import BytesIO
 st.set_page_config(page_title="Express Entry Draw Tracker", layout="wide")
 
 # Load data
-df = pd.read_csv("draw_history.csv")
+df = pd.read_csv("fallback_draw_data_2025.csv")
 
 # Convert and sort date
 df["Draw Date"] = pd.to_datetime(df["Draw Date"])
