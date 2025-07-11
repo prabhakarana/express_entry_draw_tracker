@@ -1,0 +1,34 @@
+name: Scrape OINP Current Year
+
+on:
+  schedule:
+    - cron: '0 15 * * 1-5'   # 9 AM CST/CDT
+    - cron: '0 23 * * 1-5'   # 6 PM CST/CDT
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run OINP scraper
+        run: python scrape_oinp_current.py
+
+      - name: Commit and push updates
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add data/oinp_all.json
+          git commit -m "🤖 Update OINP draw data ($(date -u +'%Y-%m-%d %H:%M UTC'))" || echo "No changes to commit"
+          git push
