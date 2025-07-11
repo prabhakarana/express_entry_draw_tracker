@@ -12,7 +12,7 @@ st.markdown("Live tracking of Express Entry ITAs, CRS scores, and draw types.")
 
 # JSON URL and fallback
 LIVE_JSON_URL = "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en1.json"
-FALLBACK_FILE = "ee_rounds_123_en.json"
+FALLBACK_FILE = os.path.join("data", "ee_rounds_123_en.json")
 
 # --- Helper Functions ---
 def parse_int_safe(value):
