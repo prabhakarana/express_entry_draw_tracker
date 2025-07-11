@@ -9,6 +9,7 @@ import os
 st.set_page_config(layout="wide")
 
 # --- Sidebar Page Selector ---
+st.sidebar.title("🧭 Navigation")
 page = st.sidebar.selectbox("📂 Select Page", ["Express Entry Draws", "OINP Summary"])
 
 # --- Express Entry Section ---
