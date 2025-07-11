@@ -1,96 +1,93 @@
 import requests
 import pandas as pd
-from datetime import datetime
 import os
 import json
+from datetime import datetime
 
-def parse_int_safe(value):
-    try:
-        return int(str(value).replace(",", "").strip())
-    except:
-        return 0
+OUTPUT_FILE = "data/oinp_all.json"
+HISTORICAL_YEARS = list(range(2009, 2025))  # 2009–2024
+BASE_URL = "https://www.ontario.ca/page/{}-ontario-immigrant-nominee-program-updates"
 
-def fetch_oinp_page(url, label):
-    print(f"Fetching {label}...", end=" ")
+def fetch_tables(year):
+    url = BASE_URL.format("2009-2014" if year <= 2014 else year)
+    print(f"\nFetching {year}... ", end="")
+
     try:
-        res = requests.get(url, timeout=10)
+        res = requests.get(url, timeout=15)
         res.raise_for_status()
-        dfs = pd.read_html(res.text)  # Parse all tables in the HTML
-        print(f"✅ Found {len(dfs)} table(s)")
-
-        records = []
-        for df_tbl in dfs:
-            df_tbl.columns = [c.strip().lower().replace("\n", " ") for c in df_tbl.columns]
-            if 'date' in df_tbl.columns and 'stream' in df_tbl.columns:
-                df_tbl['year'] = pd.to_datetime(df_tbl['date'], errors='coerce').dt.year.fillna(datetime.now().year).astype(int)
-                records.append(df_tbl)
-
-        if records:
-            return pd.concat(records, ignore_index=True)
-        else:
-            print("⚠️ No usable draw tables found.")
-            return pd.DataFrame()
-
+        dfs = pd.read_html(res.text)
     except Exception as e:
         print(f"❌ Error: {e}")
-        return pd.DataFrame()
+        return []
 
-def fetch_oinp_updates(year):
-    url = f"https://www.ontario.ca/page/{year}-ontario-immigrant-nominee-program-updates"
-    return fetch_oinp_page(url, str(year))
+    print(f"✅ Found {len(dfs)} table(s)")
+    usable_tables = []
+
+    for idx, df in enumerate(dfs):
+        print(f"🔍 Table {idx} Columns: {df.columns.tolist()}")
+
+        cols = [str(c).lower() for c in df.columns]
+        if any("stream" in c for c in cols) and any("noi" in c or "invitation" in c for c in cols):
+            print(f"✅ Usable table {idx} ✔️")
+            df["year"] = year
+            usable_tables.append(df)
+        else:
+            print(f"⚠️ Skipping table {idx} — doesn't match draw format")
+
+    return usable_tables
+
+def normalize_table(df):
+    df.columns = [str(c).strip().lower().replace('\n', ' ') for c in df.columns]
+    df = df.rename(columns={
+        "stream": "stream",
+        "draw date": "draw_date",
+        "noi": "nois",
+        "nois": "nois",
+        "invitations": "nois"
+    })
+    return df[["stream", "draw_date", "nois", "year"]].dropna(how="any")
+
+def deduplicate(existing, new_rows):
+    existing_set = set(json.dumps(r, sort_keys=True) for r in existing)
+    for row in new_rows:
+        row_str = json.dumps(row, sort_keys=True)
+        if row_str not in existing_set:
+            existing.append(row)
+    return existing
 
 def main():
-    os.makedirs("data", exist_ok=True)
+    all_data = []
 
-    # Step 1: Hardcoded group URL for 2009–2014
-    df_grouped = fetch_oinp_page(
-        "https://www.ontario.ca/page/2009-2014-ontario-immigrant-nominee-program-updates",
-        "2009–2014"
-    )
+    # Load existing
+    if os.path.exists(OUTPUT_FILE):
+        with open(OUTPUT_FILE, "r") as f:
+            all_data = json.load(f)
 
-    # Step 2: Individual pages from 2015–2024
-    dfs_yearly = [fetch_oinp_updates(y) for y in range(2015, 2025)]
+    total_rows_added = 0
+    for year in HISTORICAL_YEARS:
+        tables = fetch_tables(year)
+        if not tables:
+            continue
 
-    # Combine everything
-    df = pd.concat([df_grouped] + [d for d in dfs_yearly if not d.empty], ignore_index=True)
+        for tbl in tables:
+            try:
+                norm = normalize_table(tbl)
+                rows = norm.to_dict(orient="records")
+                before = len(all_data)
+                all_data = deduplicate(all_data, rows)
+                added = len(all_data) - before
+                total_rows_added += added
+                print(f"➕ {added} new rows added")
+            except Exception as e:
+                print(f"⚠️ Error processing table: {e}")
 
-    if df.empty:
-        print("\n❌ No data to process.")
-        return
-
-    # Step 3: Normalize and clean
-    notice_col = df.filter(regex="notice|nominations|nois", axis=1).columns[0]
-    df["notices_issued"] = df[notice_col].apply(parse_int_safe)
-
-    df.rename(columns={
-        'date': 'Draw Date',
-        'stream': 'Stream',
-        'crs score range': 'CRS Range',
-        'crs range': 'CRS Range'
-    }, inplace=True)
-
-    df["Draw Date"] = pd.to_datetime(df["Draw Date"], errors='coerce')
-    df["Draw Date"] = df["Draw Date"].dt.strftime("%Y-%m-%d")
-    df = df[["Draw Date", "Stream", "notices_issued", "CRS Range", "year"]]
-
-    # Step 4: Deduplicate and append to master
-    all_file = "data/oinp_all.json"
-    if os.path.exists(all_file):
-        with open(all_file, "r") as f:
-            existing = json.load(f)
+    if total_rows_added > 0:
+        os.makedirs("data", exist_ok=True)
+        with open(OUTPUT_FILE, "w") as f:
+            json.dump(all_data, f, indent=2)
+        print(f"\n✅ Saved {len(all_data)} total unique rows to {OUTPUT_FILE}")
     else:
-        existing = []
-
-    existing_keys = {(d["Draw Date"], d["Stream"]) for d in existing}
-    new_records = [r for r in df.to_dict(orient="records") if (r["Draw Date"], r["Stream"]) not in existing_keys]
-
-    combined = existing + new_records
-    combined.sort(key=lambda x: (x["Draw Date"], x["Stream"]))
-
-    with open(all_file, "w") as f:
-        json.dump(combined, f, indent=2)
-
-    print(f"\n✅ Appended {len(new_records)} new historical record(s) to: {all_file}")
+        print("\n⚠️ No new data to process.")
 
 if __name__ == "__main__":
     main()
