@@ -67,7 +67,8 @@ if df.empty:
 # --- Sidebar Filter ---
 st.sidebar.header("🔍 Filter Options")
 years = sorted(df["Year"].unique(), reverse=True)
-selected_years = st.sidebar.multiselect("Select Year(s)", years, default=years)
+default_years = years[:5]  # Prefill only most recent 5 years
+selected_years = st.sidebar.multiselect("Select Year(s)", years, default=default_years)
 filtered_df = df[df["Year"].isin(selected_years)]
 
 if filtered_df.empty:
