@@ -3,6 +3,9 @@ import pandas as pd
 import json
 import os
 from datetime import datetime
+import re
+
+OUTPUT_FILE = "data/oinp_all.json"
 
 def fetch_tables(url):
     try:
@@ -15,10 +18,24 @@ def fetch_tables(url):
         print(f"❌ Error: {e}")
         return []
 
+def clean_stream_name(name):
+    name = str(name)
+    fixes = {
+        "JobOffer": "Job Offer",
+        "stream": "",
+        "Stream": "",
+        "Graduatestream": "Graduate Stream",
+        "ExpressEntry": "Express Entry",
+        "Entrepreneurstream": "Entrepreneur Stream"
+    }
+    for k, v in fixes.items():
+        name = name.replace(k, v)
+    name = re.sub(r'\s+', ' ', name).strip()
+    return name.title()
+
 def extract_valid_draws(tbl, year):
     expected_cols = {"Stream", "Number of nominations"}
     if expected_cols.issubset(set(tbl.columns)):
-        print(f"✅ Keeping table with columns: {list(tbl.columns)}")
         rows = []
         for _, row in tbl.iterrows():
             try:
@@ -28,32 +45,18 @@ def extract_valid_draws(tbl, year):
                 nominations = int(str(nominations_raw).replace(',', '').strip())
                 rows.append({
                     "year": year,
-                    "stream": str(row["Stream"]).strip(),
+                    "stream": clean_stream_name(row["Stream"]),
                     "nominations": nominations
                 })
             except Exception as e:
-                print(f"⚠️  Skipping row due to error: {e}")
+                print(f"⚠️ Skipping row: {e}")
         return rows
-    else:
-        print(f"⚠️  Skipping table — doesn't match draw format")
-        return []
-
-def load_existing_data(file_path):
-    if os.path.exists(file_path):
-        with open(file_path) as f:
-            return json.load(f)
     return []
 
-def save_data(file_path, data):
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    with open(file_path, "w") as f:
-        json.dump(data, f, indent=2)
-    print(f"💾 Saved {len(data)} entries to {file_path}")
-
 def main():
-    all_data = load_existing_data("data/oinp_all.json")
-    existing_keys = {(entry["year"], entry["stream"]) for entry in all_data}
-    new_entries = []
+    os.makedirs("data", exist_ok=True)
+    all_data = []
+    seen_keys = set()
 
     for year in range(2009, 2025):
         print(f"\n📅 Fetching {year}...")
@@ -64,20 +67,20 @@ def main():
 
         dfs = fetch_tables(url)
         for i, df in enumerate(dfs):
-            print(f"🔎 Table {i} Columns: {list(df.columns)}")
-            valid_rows = extract_valid_draws(df, year)
-            for row in valid_rows:
+            print(f"🔍 Table {i} Columns: {list(df.columns)}")
+            rows = extract_valid_draws(df, year)
+            for row in rows:
                 key = (row["year"], row["stream"])
-                if key not in existing_keys:
-                    new_entries.append(row)
-                    existing_keys.add(key)
+                if key not in seen_keys:
+                    all_data.append(row)
+                    seen_keys.add(key)
 
-    if new_entries:
-        all_data.extend(new_entries)
-        save_data("data/oinp_all.json", all_data)
-        print(f"✅ Added {len(new_entries)} new entries.")
+    if all_data:
+        with open(OUTPUT_FILE, "w") as f:
+            json.dump(all_data, f, indent=2)
+        print(f"\n✅ Saved {len(all_data)} cleaned & deduplicated entries to {OUTPUT_FILE}")
     else:
-        print("⚠️ No new data to process.")
+        print("\n⚠️ No usable data found.")
 
 if __name__ == "__main__":
     main()
