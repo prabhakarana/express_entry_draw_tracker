@@ -11,7 +11,7 @@ st.markdown("🍁 **# Express Entry Draw Tracker (Canada)**")
 st.markdown("Live tracking of Express Entry ITAs, CRS scores, and draw types.")
 
 # JSON URL and fallback
-LIVE_JSON_URL = "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
+LIVE_JSON_URL = "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en1.json"
 FALLBACK_FILE = "ee_rounds_123_en.json"
 
 # --- Helper Functions ---
