@@ -1,85 +1,83 @@
-import os
-import json
-import pandas as pd
 import requests
-from bs4 import BeautifulSoup
+import pandas as pd
+import json
+import os
+from datetime import datetime
 
-OUTPUT_FILE = "data/oinp_all.json"
-VALID_COLUMNS = ['Stream', 'Number of nominations']
-YEAR_RANGE = range(2009, 2025)
-
-def fetch_page(year):
-    if year == 2009:
-        url = "https://www.ontario.ca/page/2009-2014-ontario-immigrant-nominee-program-updates"
-    else:
-        url = f"https://www.ontario.ca/page/{year}-ontario-immigrant-nominee-program-updates"
-    print(f"\nFetching {year}...", end=' ')
+def fetch_tables(url):
     try:
-        response = requests.get(url, timeout=20)
-        response.raise_for_status()
-        return response.text
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        return None
-
-def extract_valid_draws(html, year):
-    try:
-        dfs = pd.read_html(html)
+        res = requests.get(url, timeout=10)
+        res.raise_for_status()
+        dfs = pd.read_html(res.text)
+        print(f"✅ Fetched {len(dfs)} table(s)")
+        return dfs
     except Exception as e:
         print(f"❌ Error: {e}")
         return []
 
-    print(f"✅ Found {len(dfs)} table(s)")
-    data = []
-    for i, df in enumerate(dfs):
-        print(f"⚠️ Table {i} Columns: {list(df.columns)}")
-        if list(df.columns) == VALID_COLUMNS:
-            print(f"✅ Keeping table {i}")
-            for _, row in df.iterrows():
-                data.append({
+def extract_valid_draws(tbl, year):
+    expected_cols = {"Stream", "Number of nominations"}
+    if expected_cols.issubset(set(tbl.columns)):
+        print(f"✅ Keeping table with columns: {list(tbl.columns)}")
+        rows = []
+        for _, row in tbl.iterrows():
+            try:
+                nominations_raw = row["Number of nominations"]
+                if pd.isna(nominations_raw):
+                    continue
+                nominations = int(str(nominations_raw).replace(',', '').strip())
+                rows.append({
                     "year": year,
-                    "stream": row["Stream"],
-                    "nominations": int(row["Number of nominations"])
+                    "stream": str(row["Stream"]).strip(),
+                    "nominations": nominations
                 })
-        else:
-            print(f"⚠️ Skipping table {i} – doesn't match draw format")
-    return data
+            except Exception as e:
+                print(f"⚠️  Skipping row due to error: {e}")
+        return rows
+    else:
+        print(f"⚠️  Skipping table — doesn't match draw format")
+        return []
 
-def load_existing():
-    if os.path.exists(OUTPUT_FILE):
-        with open(OUTPUT_FILE, "r") as f:
+def load_existing_data(file_path):
+    if os.path.exists(file_path):
+        with open(file_path) as f:
             return json.load(f)
     return []
 
-def save_data(data):
-    with open(OUTPUT_FILE, "w") as f:
+def save_data(file_path, data):
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, "w") as f:
         json.dump(data, f, indent=2)
-
-def deduplicate(existing, new_data):
-    combined = {f"{d['year']}_{d['stream']}": d for d in existing}
-    for item in new_data:
-        key = f"{item['year']}_{item['stream']}"
-        combined[key] = item
-    return list(combined.values())
+    print(f"💾 Saved {len(data)} entries to {file_path}")
 
 def main():
-    os.makedirs("data", exist_ok=True)
-    existing_data = load_existing()
-    all_new_data = []
+    all_data = load_existing_data("data/oinp_all.json")
+    existing_keys = {(entry["year"], entry["stream"]) for entry in all_data}
+    new_entries = []
 
-    for year in YEAR_RANGE:
-        html = fetch_page(year)
-        if not html:
-            continue
-        year_data = extract_valid_draws(html, year)
-        all_new_data.extend(year_data)
+    for year in range(2009, 2025):
+        print(f"\n📅 Fetching {year}...")
+        if year <= 2014:
+            url = "https://www.ontario.ca/page/2009-2014-ontario-immigrant-nominee-program-updates"
+        else:
+            url = f"https://www.ontario.ca/page/{year}-ontario-immigrant-nominee-program-updates"
 
-    if all_new_data:
-        final_data = deduplicate(existing_data, all_new_data)
-        save_data(final_data)
-        print(f"\n✅ Saved {len(final_data)} total entries to {OUTPUT_FILE}")
+        dfs = fetch_tables(url)
+        for i, df in enumerate(dfs):
+            print(f"🔎 Table {i} Columns: {list(df.columns)}")
+            valid_rows = extract_valid_draws(df, year)
+            for row in valid_rows:
+                key = (row["year"], row["stream"])
+                if key not in existing_keys:
+                    new_entries.append(row)
+                    existing_keys.add(key)
+
+    if new_entries:
+        all_data.extend(new_entries)
+        save_data("data/oinp_all.json", all_data)
+        print(f"✅ Added {len(new_entries)} new entries.")
     else:
-        print("\n❌ No new data to process.")
+        print("⚠️ No new data to process.")
 
 if __name__ == "__main__":
     main()
