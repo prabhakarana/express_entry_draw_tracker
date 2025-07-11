@@ -1,0 +1,31 @@
+name: One-Time OINP Bootstrap
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run historical OINP bootstrap (2009–2024)
+        run: python scrape_oinp_2009_2024.py
+
+      - name: Commit updated oinp_all.json
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add data/oinp_all.json
+          git commit -m "🕰️ Add historical OINP records (2009–2024)" || echo "No changes"
+          git push
