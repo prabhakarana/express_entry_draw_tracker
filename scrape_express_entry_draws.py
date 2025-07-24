@@ -1,37 +1,29 @@
+# save_json_to_csv.py
+
 import requests
-from bs4 import BeautifulSoup
 import pandas as pd
 
-URL = "https://www.canada.ca/en/immigration-refugees-citizenship/corporate/mandate/policies-operational-instructions-agreements/ministerial-instructions/express-entry-rounds.html"
-CSV_FILE = "express_entry_draws.csv"
+json_url = "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
+csv_file = "fallback_draw_data_2025.csv"
 
-def scrape_express_entry_table():
-    response = requests.get(URL)
-    soup = BeautifulSoup(response.text, "html.parser")
+res = requests.get(json_url)
+res.raise_for_status()
 
-    table = soup.find("table")
-    if not table:
-        raise ValueError("Draw table not found on the page.")
+rounds = res.json().get("rounds", [])
 
-    rows = table.find_all("tr")
-    headers = [th.text.strip() for th in rows[0].find_all("th")]
+data = []
+for d in rounds:
+    data.append({
+        "Draw #": int(d.get("drawNumber", 0)),
+        "Draw Date": d.get("drawDateFull", d.get("drawDate")),
+        "Category": d.get("drawName", "N/A"),
+        "ITAs Issued": int(str(d.get("drawSize", "0")).replace(",", "")),
+        "CRS Score": int(str(d.get("drawCRS", "0")).replace(",", ""))
+    })
 
-    data = []
-    for row in rows[1:]:
-        cols = [td.get_text(strip=True) for td in row.find_all("td")]
-        if len(cols) == len(headers):
-            data.append(cols)
+df = pd.DataFrame(data)
+df["Draw Date"] = pd.to_datetime(df["Draw Date"])
+df = df.sort_values("Draw Date", ascending=False)
 
-    df = pd.DataFrame(data, columns=headers)
-
-    # Rename and clean columns
-    df.columns = ["Draw #", "Draw Date", "Category", "ITAs Issued", "CRS Score"]
-    df["ITAs Issued"] = df["ITAs Issued"].str.replace(",", "").astype(int)
-    df["CRS Score"] = df["CRS Score"].str.extract("(\d+)").astype(float)
-    df["Draw #"] = df["Draw #"].str.extract("(\d+)").astype(int)
-
-    df.to_csv(CSV_FILE, index=False)
-    print(f"✅ Scraped and saved {len(df)} records to {CSV_FILE}")
-
-if __name__ == "__main__":
-    scrape_express_entry_table()
+df.to_csv(csv_file, index=False)
+print(f"✅ Saved {len(df)} draws to {csv_file}")
