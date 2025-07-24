@@ -6,11 +6,17 @@ import pandas as pd
 from datetime import datetime
 import smtplib
 from email.message import EmailMessage
+import re
 
 # JSON URL and fallback
 LIVE_JSON_URL = "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
 FALLBACK_FILE = "data/ee_rounds_123_en.json"
 LAST_SENT_FILE = "last_sent.json"
+
+# Extract safe integer from draw number string
+def safe_draw_number(raw):
+    match = re.search(r"\d+", str(raw))
+    return int(match.group()) if match else 0
 
 # Load JSON from URL or fallback
 def load_json_data():
@@ -41,7 +47,7 @@ def update_last_sent_date(latest_date):
 # Fetch and transform draw data
 draws = load_json_data()
 df = pd.DataFrame([{
-    "Draw #": int(str(d.get("drawNumber", "0")).split()[0]),
+    "Draw #": safe_draw_number(d.get("drawNumber")),
     "Draw Date": d.get("drawDateFull", d.get("drawDate")),
     "Category": d.get("drawName", "N/A"),
     "ITAs Issued": int(str(d.get("drawSize", "0")).replace(",", "")),
