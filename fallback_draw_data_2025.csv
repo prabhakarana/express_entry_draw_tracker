@@ -1,6 +1,358 @@
 Draw #,Draw Date,Category,ITAs Issued,CRS Score
-355,"Jul 08, 2025",Canadian Experience Class,3000,518
-354,"Jul 07, 2025",Provincial Nominee Program,356,750
-353,"Jun 26, 2025",Canadian Experience Class,3000,521
-352,"Jun 23, 2025",Provincial Nominee Program,503,742
-351,"Jun 12, 2025",Canadian Experience Class,3000,529
+357,2025-07-22,Healthcare and social services occupations (Version 2),4000,475
+356,2025-07-21,Provincial Nominee Program,202,788
+355,2025-07-08,Canadian Experience Class,3000,518
+354,2025-07-07,Provincial Nominee Program,356,750
+353,2025-06-26,Canadian Experience Class,3000,521
+352,2025-06-23,Provincial Nominee Program,503,742
+351,2025-06-12,Canadian Experience Class,3000,529
+350,2025-06-10,Provincial Nominee Program,125,784
+349,2025-06-04,Healthcare and social services occupations (Version 2),500,504
+348,2025-06-02,Provincial Nominee Program,277,726
+347,2025-05-13,Canadian Experience Class,500,547
+346,2025-05-12,Provincial Nominee Program,511,706
+345,2025-05-02,Healthcare and social services occupations (Version 2),500,510
+344,2025-05-01,Education occupations (Version 1),1000,479
+343,2025-04-28,Provincial Nominee Program,421,727
+342,2025-04-14,Provincial Nominee Program,825,764
+341,2025-03-21,French language proficiency (Version 1),7500,379
+340,2025-03-17,Provincial Nominee Program,536,736
+339,2025-03-06,French language proficiency (Version 1),4500,410
+338,2025-03-03,Provincial Nominee Program,725,667
+337,2025-02-19,French language proficiency (Version 1),6500,428
+336,2025-02-17,Provincial Nominee Program,646,750
+335,2025-02-05,Canadian Experience Class,4000,521
+334,2025-02-04,Provincial Nominee Program,455,802
+333,2025-01-23,Canadian Experience Class,4000,527
+332,2025-01-08,Canadian Experience Class,1350,542
+331,2025-01-07,Provincial Nominee Program,471,793
+330,2024-12-16,Provincial Nominee Program,1085,727
+329,2024-12-03,French language proficiency (Version 1),800,466
+328,2024-12-02,Provincial Nominee Program,676,705
+327,2024-11-20,Healthcare occupations (Version 1),3000,463
+326,2024-11-19,Canadian Experience Class,400,539
+325,2024-11-18,Provincial Nominee Program,174,816
+324,2024-11-15,French language proficiency (Version 1),800,478
+323,2024-11-13,Canadian Experience Class,400,547
+322,2024-11-12,Provincial Nominee Program,733,812
+321,2024-10-23,Trade occupations (Version 1),1800,433
+320,2024-10-22,Canadian Experience Class,400,539
+319,2024-10-21,Provincial Nominee Program,648,791
+318,2024-10-10,French language proficiency (Version 1),1000,444
+317,2024-10-09,Canadian Experience Class,500,539
+316,2024-10-07,Provincial Nominee Program,1613,743
+315,2024-09-19,Canadian Experience Class,4000,509
+314,2024-09-13,French language proficiency (Version 1),1000,446
+313,2024-09-09,Provincial Nominee Program,911,732
+312,2024-08-27,Canadian Experience Class,3300,507
+311,2024-08-26,Provincial Nominee Program,1121,694
+310,2024-08-15,French language proficiency (Version 1),2000,394
+309,2024-08-14,Canadian Experience Class,3200,509
+308,2024-08-13,Provincial Nominee Program,763,690
+307,2024-07-31,Canadian Experience Class,5000,510
+306,2024-07-30,Provincial Nominee Program,964,686
+305,2024-07-18,French language proficiency (Version 1),1800,400
+304,2024-07-17,Canadian Experience Class,6300,515
+303,2024-07-16,Provincial Nominee Program,1391,670
+302,2024-07-08,French language proficiency (Version 1),3200,420
+301,2024-07-05,Healthcare occupations (Version 1),3750,445
+300,2024-07-04,Trade occupations (Version 1),1800,436
+299,2024-07-02,Provincial Nominee Program,920,739
+298,2024-06-19,Provincial Nominee Program,1499,663
+297,2024-05-31,Canadian Experience Class,3000,522
+296,2024-05-30,Provincial Nominee Program,2985,676
+295,2024-04-24,French language proficiency (Version 1),1400,410
+294,2024-04-23,General,2095,529
+293,2024-04-11,STEM occupations (Version 1),4500,491
+292,2024-04-10,General,1280,549
+291,2024-03-26,French language proficiency (Version 1),1500,388
+290,2024-03-25,General,1980,524
+289,2024-03-13,Transport occupations (Version 1),975,430
+288,2024-03-12,General,2850,525
+287,2024-02-29,French language proficiency (Version 1),2500,336
+286,2024-02-28,General,1470,534
+285,2024-02-16,Agriculture and agri-food occupations (Version 1),150,437
+284,2024-02-14,Healthcare occupations (Version 1),3500,422
+283,2024-02-13,General,1490,535
+282,2024-02-01,French language proficiency (Version 1),7000,365
+281,2024-01-31,General,730,541
+280,2024-01-23,General,1040,543
+279,2024-01-10,General,1510,546
+278,2023-12-21,Agriculture and agri-food occupations (Version 1),400,386
+277,2023-12-20,Transport occupations (Version 1),670,435
+276,2023-12-19,Trade occupations (Version 1),1000,425
+275,2023-12-18,General,1325,542
+274,2023-12-08,STEM occupations (Version 1),5900,481
+273,2023-12-07,French language proficiency (Version 1),1000,470
+272,2023-12-06,General,4750,561
+271,2023-10-26,Healthcare occupations (Version 1),3600,431
+270,2023-10-25,French language proficiency (Version 1),300,486
+269,2023-10-24,Provincial Nominee Program,1548,776
+268,2023-10-10,No Program Specified,3725,500
+267,2023-09-28,Agriculture and agri-food occupations (Version 1),600,354
+266,2023-09-27,French language proficiency (Version 1),500,472
+265,2023-09-26,No Program Specified,3000,504
+264,2023-09-20,Transport occupations (Version 1),1000,435
+263,2023-09-19,No Program Specified,3200,531
+262,2023-08-15,No Program Specified,4300,496
+261,2023-08-03,Trade occupations (Version 1),1500,388
+260,2023-08-02,French language proficiency (Version 1),800,435
+259,2023-08-01,No Program Specified,2000,517
+258,2023-07-12,French language proficiency (Version 1),3800,375
+257,2023-07-11,No Program Specified,800,505
+256,2023-07-07,French language proficiency (Version 1),2300,439
+255,2023-07-06,Healthcare occupations (Version 1),1500,463
+254,2023-07-05,STEM occupations (Version 1),500,486
+253,2023-07-04,No Program Specified,700,511
+252,2023-06-28,Healthcare occupations (Version 1),500,476
+251,2023-06-27,No Program Specified,4300,486
+250,2023-06-08,No Program Specified,4800,486
+249,2023-05-24,No Program Specified,4800,488
+248,2023-05-10,Provincial Nominee Program,589,691
+247,2023-04-26,No Program Specified,3500,483
+246,2023-04-12,No Program Specified,3500,486
+245,2023-03-29,No Program Specified,7000,481
+244,2023-03-23,No Program Specified,7000,484
+243,2023-03-15,No Program Specified,7000,490
+242,2023-03-01,Provincial Nominee Program,667,748
+241,2023-02-15,Provincial Nominee Program,699,791
+240,2023-02-02,Federal Skilled Worker,3300,489
+239,2023-02-01,Provincial Nominee Program,893,733
+238,2023-01-18,No Program Specified,5500,490
+237,2023-01-11,No Program Specified,5500,507
+236,2022-11-23,No Program Specified,4750,491
+235,2022-11-09,No Program Specified,4750,494
+234,2022-10-26,No Program Specified,4750,496
+233,2022-10-12,No Program Specified,4250,500
+232,2022-09-28,No Program Specified,3750,504
+231,2022-09-14,No Program Specified,3250,510
+230,2022-08-31,No Program Specified,2750,516
+229,2022-08-17,No Program Specified,2250,525
+228,2022-08-03,No Program Specified,2000,533
+227,2022-07-20,No Program Specified,1750,542
+226,2022-07-06,No Program Specified,1500,557
+225,2022-06-22,Provincial Nominee Program,636,752
+224,2022-06-08,Provincial Nominee Program,932,796
+223,2022-05-25,Provincial Nominee Program,590,741
+222,2022-05-11,Provincial Nominee Program,545,753
+221,2022-04-27,Provincial Nominee Program,829,772
+220,2022-04-13,Provincial Nominee Program,787,782
+219,2022-03-30,Provincial Nominee Program,919,785
+218,2022-03-16,Provincial Nominee Program,924,754
+217,2022-03-02,Provincial Nominee Program,1047,761
+216,2022-02-16,Provincial Nominee Program,1082,710
+215,2022-02-02,Provincial Nominee Program,1070,674
+214,2022-01-19,Provincial Nominee Program,1036,745
+213,2022-01-05,Provincial Nominee Program,392,808
+212,2021-12-22,Provincial Nominee Program,746,720
+211,2021-12-10,Provincial Nominee Program,1032,698
+210,2021-11-24,Provincial Nominee Program,613,737
+209,2021-11-10,Provincial Nominee Program,775,685
+208,2021-10-27,Provincial Nominee Program,681,744
+207,2021-10-13,Provincial Nominee Program,681,720
+206,2021-09-29,Provincial Nominee Program,761,742
+205,2021-09-15,Provincial Nominee Program,521,732
+204,2021-09-14,Canadian Experience Class,2000,462
+203,2021-09-01,Provincial Nominee Program,635,764
+202,2021-08-19,Canadian Experience Class,3000,403
+201,2021-08-18,Provincial Nominee Program,463,751
+200,2021-08-05,Canadian Experience Class,3000,404
+199,2021-08-04,Provincial Nominee Program,512,760
+198,2021-07-22,Canadian Experience Class,4500,357
+197,2021-07-21,Provincial Nominee Program,462,734
+196,2021-07-08,Canadian Experience Class,4500,369
+195,2021-07-07,Provincial Nominee Program,627,760
+194,2021-06-24,Canadian Experience Class,6000,357
+193,2021-06-23,Provincial Nominee Program,1002,742
+192,2021-06-10,Canadian Experience Class,6000,368
+191,2021-06-09,Provincial Nominee Program,940,711
+190,2021-05-31,Canadian Experience Class,5956,380
+189,2021-05-26,Provincial Nominee Program,500,713
+188,2021-05-20,Canadian Experience Class,1842,397
+187,2021-05-13,Canadian Experience Class,4147,401
+186,2021-05-12,Provincial Nominee Program,557,752
+185,2021-04-29,Canadian Experience Class,6000,400
+184,2021-04-28,Provincial Nominee Program,381,717
+183,2021-04-16,Canadian Experience Class,6000,417
+182,2021-04-14,Provincial Nominee Program,266,753
+181,2021-04-01,Canadian Experience Class,5000,432
+180,2021-03-31,Provincial Nominee Program,284,778
+179,2021-03-18,Canadian Experience Class,5000,449
+178,2021-03-17,Provincial Nominee Program,183,682
+177,2021-03-08,Provincial Nominee Program,671,739
+176,2021-02-13,Canadian Experience Class,27332,75
+175,2021-02-10,Provincial Nominee Program,654,720
+174,2021-01-21,Canadian Experience Class,4626,454
+173,2021-01-20,Provincial Nominee Program,374,741
+172,2021-01-07,Canadian Experience Class,4750,461
+171,2021-01-06,Provincial Nominee Program,250,813
+170,2020-12-23,No Program Specified,5000,468
+169,2020-12-09,No Program Specified,5000,469
+168,2020-11-25,No Program Specified,5000,469
+167,2020-11-18,No Program Specified,5000,472
+166,2020-11-05,No Program Specified,4500,478
+165,2020-10-14,No Program Specified,4500,471
+164,2020-09-30,No Program Specified,4200,471
+163,2020-09-16,No Program Specified,4200,472
+162,2020-09-02,No Program Specified,4200,475
+161,2020-08-20,Canadian Experience Class,3300,454
+160,2020-08-19,Provincial Nominee Program,600,771
+159,2020-08-06,Federal Skilled Trades,250,415
+158,2020-08-05,No Program Specified,3900,476
+157,2020-07-23,Canadian Experience Class,3343,445
+156,2020-07-22,Provincial Nominee Program,557,687
+155,2020-07-08,No Program Specified,3900,478
+154,2020-06-25,Canadian Experience Class,3508,431
+153,2020-06-24,Provincial Nominee Program,392,696
+152,2020-06-11,Canadian Experience Class,3559,437
+151,2020-06-10,Provincial Nominee Program,341,743
+150,2020-05-28,Canadian Experience Class,3515,440
+149,2020-05-27,Provincial Nominee Program,385,757
+148,2020-05-14,Canadian Experience Class,3371,447
+147,2020-05-13,Provincial Nominee Program,529,718
+146,2020-04-30,Canadian Experience Class,3311,452
+145,2020-04-29,Provincial Nominee Program,589,692
+144,2020-04-16,Canadian Experience Class,3782,455
+143,2020-04-15,Provincial Nominee Program,118,808
+142,2020-04-09,Canadian Experience Class,3294,464
+141,2020-04-09,Provincial Nominee Program,606,698
+140,2020-03-23,Canadian Experience Class,3232,467
+139,2020-03-18,Provincial Nominee Program,668,720
+138,2020-03-04,No Program Specified,3900,471
+137,2020-02-19,No Program Specified,4500,470
+136,2020-02-05,No Program Specified,3500,472
+135,2020-01-22,No Program Specified,3400,471
+134,2020-01-08,No Program Specified,3400,473
+133,2019-12-19,No Program Specified,3200,469
+132,2019-12-11,No Program Specified,3200,472
+131,2019-11-27,No Program Specified,3600,471
+130,2019-11-13,No Program Specified,3600,472
+129,2019-10-30,No Program Specified,3900,475
+128,2019-10-16,Federal Skilled Trades,500,357
+127,2019-10-02,No Program Specified,3900,464
+126,2019-09-18,No Program Specified,3600,462
+125,2019-09-04,No Program Specified,3600,463
+124,2019-08-20,No Program Specified,3600,457
+123,2019-08-12,No Program Specified,3600,466
+122,2019-07-24,No Program Specified,3600,459
+121,2019-07-10,No Program Specified,3600,460
+120,2019-06-26,No Program Specified,3350,462
+119,2019-06-12,No Program Specified,3350,465
+118,2019-05-29,No Program Specified,3350,470
+117,2019-05-15,Federal Skilled Trades,500,332
+116,2019-05-01,No Program Specified,3350,450
+115,2019-04-17,No Program Specified,3350,451
+114,2019-04-03,No Program Specified,3350,451
+113,2019-03-20,No Program Specified,3350,452
+112,2019-03-06,No Program Specified,3350,454
+111,2019-02-20,No Program Specified,3350,457
+110,2019-01-30,No Program Specified,3350,438
+109,2019-01-23,No Program Specified,3900,443
+108,2019-01-09,No Program Specified,3900,449
+107,2018-12-19,No Program Specified,3900,439
+106,2018-12-12,No Program Specified,3900,445
+105,2018-11-28,No Program Specified,3900,445
+104,2018-11-14,No Program Specified,3900,449
+103,2018-10-29,No Program Specified,3900,442
+102,2018-10-15,No Program Specified,3900,440
+101,2018-10-03,No Program Specified,3900,445
+100,2018-09-24,Federal Skilled Trades,400,284
+99,2018-09-19,No Program Specified,3500,441
+98,2018-09-05,No Program Specified,3900,440
+97,2018-08-22,No Program Specified,3750,440
+96,2018-08-08,No Program Specified,3750,440
+95,2018-07-25,No Program Specified,3750,441
+94,2018-07-11,No Program Specified,3750,442
+93,2018-06-25,No Program Specified,3750,442
+92,2018-06-13,No Program Specified,3750,451
+91,2018-05-30,Federal Skilled Trades,500,288
+90,2018-05-23,No Program Specified,3500,440
+89,2018-05-09,No Program Specified,3500,441
+88,2018-04-25,No Program Specified,3500,441
+87,2018-04-11,No Program Specified,3500,444
+86,2018-03-26,No Program Specified,3000,446
+85,2018-03-14,No Program Specified,3000,456
+84,2018-02-21,No Program Specified,3000,442
+83,2018-02-07,No Program Specified,3000,442
+82,2018-01-24,No Program Specified,2750,444
+81,2018-01-10,No Program Specified,2750,446
+80,2017-12-20,No Program Specified,2750,446
+79,2017-12-06,No Program Specified,2750,452
+78,2017-11-15,No Program Specified,2750,439
+77,2017-11-08,No Program Specified,2000,458
+76,2017-11-01,Federal Skilled Trades,505,241
+75,2017-11-01,Provincial Nominee Program,290,673
+74,2017-10-18,No Program Specified,2757,436
+73,2017-10-04,No Program Specified,2801,438
+72,2017-09-20,No Program Specified,2871,433
+71,2017-09-06,No Program Specified,2772,435
+70,2017-08-23,No Program Specified,3035,434
+69,2017-08-09,No Program Specified,2991,433
+68,2017-08-02,No Program Specified,3264,441
+67,2017-07-12,No Program Specified,3202,440
+66,2017-06-28,No Program Specified,3409,449
+65,2017-05-31,No Program Specified,3877,413
+64,2017-05-26,Federal Skilled Trades,400,199
+63,2017-05-26,Provincial Nominee Program,143,775
+62,2017-05-17,No Program Specified,3687,415
+61,2017-05-04,No Program Specified,3796,423
+60,2017-04-19,No Program Specified,3665,415
+59,2017-04-12,No Program Specified,3923,423
+58,2017-04-05,No Program Specified,3753,431
+57,2017-03-24,No Program Specified,3749,441
+56,2017-03-01,No Program Specified,3884,434
+55,2017-02-22,No Program Specified,3611,441
+54,2017-02-08,No Program Specified,3644,447
+53,2017-01-25,No Program Specified,3508,453
+52,2017-01-11,No Program Specified,3334,459
+51,2017-01-04,No Program Specified,2902,468
+50,2016-12-22,No Program Specified,2878,475
+49,2016-12-16,No Program Specified,1936,497
+48,2016-11-30,Provincial Nominee Program,559,786
+47,2016-11-16,No Program Specified,2427,470
+46,2016-11-02,No Program Specified,2080,472
+45,2016-10-19,No Program Specified,1804,475
+44,2016-10-12,No Program Specified,1518,484
+43,2016-09-21,No Program Specified,1288,483
+42,2016-09-07,No Program Specified,1000,491
+41,2016-08-24,No Program Specified,750,538
+40,2016-08-10,No Program Specified,754,490
+39,2016-07-27,No Program Specified,755,488
+38,2016-07-13,No Program Specified,747,482
+37,2016-06-29,No Program Specified,773,482
+36,2016-06-15,No Program Specified,752,488
+35,2016-06-01,No Program Specified,762,483
+34,2016-05-18,No Program Specified,763,484
+33,2016-05-06,No Program Specified,799,534
+32,2016-04-20,No Program Specified,1018,468
+31,2016-04-06,No Program Specified,954,470
+30,2016-03-23,No Program Specified,1014,470
+29,2016-03-09,No Program Specified,1013,473
+28,2016-02-24,No Program Specified,1484,453
+27,2016-02-10,No Program Specified,1505,459
+26,2016-01-27,No Program Specified,1468,457
+25,2016-01-13,No Program Specified,1518,453
+24,2016-01-06,No Program Specified,1463,461
+23,2015-12-18,No Program Specified,1503,460
+22,2015-12-04,No Program Specified,1451,461
+21,2015-11-27,No Program Specified,1559,472
+20,2015-11-13,No Program Specified,1506,484
+19,2015-10-23,No Program Specified,1502,489
+18,2015-10-02,No Program Specified,1530,450
+17,2015-09-18,No Program Specified,1545,450
+16,2015-09-08,No Program Specified,1517,459
+15,2015-08-21,No Program Specified,1523,456
+14,2015-08-07,No Program Specified,1402,471
+13,2015-07-17,No Program Specified,1581,451
+12,2015-07-10,No Program Specified,1516,463
+11,2015-06-26,No Program Specified,1575,469
+10,2015-06-12,No Program Specified,1501,482
+9,2015-05-22,No Program Specified,1361,755
+8,2015-04-17,No Program Specified,715,453
+7,2015-04-10,No Program Specified,925,469
+6,2015-03-27,No Program Specified,1637,453
+5,2015-03-20,No Program Specified,1620,481
+4,2015-02-27,No Program Specified,1187,735
+3,2015-02-20,Canadian Experience Class,849,808
+2,2015-02-07,No Program Specified,779,818
+1,2015-01-31,No Program Specified,779,886
